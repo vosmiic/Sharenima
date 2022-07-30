@@ -1,0 +1,64 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.0.0
+MinimumVisualStudioVersion = 16.0.0.0
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sharenima.Server", "Server\Sharenima.Server.csproj", "{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sharenima.Client", "Client\Sharenima.Client.csproj", "{5B9F010B-F060-467A-AC5D-C371912D91C2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sharenima.Shared", "Shared\Sharenima.Shared.csproj", "{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Debug|x64.Build.0 = Debug|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Debug|x86.Build.0 = Debug|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Release|x64.ActiveCfg = Release|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Release|x64.Build.0 = Release|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Release|x86.ActiveCfg = Release|Any CPU
+		{5B9F010B-F060-467A-AC5D-C371912D91C2}.Release|x86.Build.0 = Release|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Debug|x64.Build.0 = Debug|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Debug|x86.Build.0 = Debug|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Release|x64.ActiveCfg = Release|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Release|x64.Build.0 = Release|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Release|x86.ActiveCfg = Release|Any CPU
+		{C5F5D930-12E8-4C97-9C2E-AE6EAA575812}.Release|x86.Build.0 = Release|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Debug|x64.Build.0 = Debug|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Debug|x86.Build.0 = Debug|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Release|x64.ActiveCfg = Release|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Release|x64.Build.0 = Release|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Release|x86.ActiveCfg = Release|Any CPU
+		{6D72CB71-143A-44BB-86B6-DDF84A4EEAA6}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8A5D5896-D193-4D06-8D8B-CE52BACA30DB}
+	EndGlobalSection
+EndGlobal
