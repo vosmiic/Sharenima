@@ -11,7 +11,7 @@ public partial class Index : ComponentBase {
 
     [Authorize]
     protected async Task<bool> CreateInstance() {
-        var xd = await _httpClient.PostAsync($"instance?instanceName={InstanceName}", null);
-        return xd.IsSuccessStatusCode;
+        var createInstanceResponse = await _httpClient.PostAsync($"instance?instanceName={InstanceName}", null);
+        return createInstanceResponse.IsSuccessStatusCode;
     }
 }
