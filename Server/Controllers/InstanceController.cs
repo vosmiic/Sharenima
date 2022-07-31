@@ -1,15 +1,14 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
 using Sharenima.Server.Models;
+using Sharenima.Shared;
 
 namespace Sharenima.Server.Controllers; 
 
-[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class InstanceController : ControllerBase {
@@ -28,6 +27,7 @@ public class InstanceController : ControllerBase {
     /// <param name="instanceName">Name of the new instance.</param>
     /// <returns>Created instance.</returns>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult> CreateInstance(string instanceName) {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return BadRequest("Authenticated user could not be found.");
@@ -42,5 +42,13 @@ public class InstanceController : ControllerBase {
         await context.SaveChangesAsync();
 
         return Ok(instance);
+    }
+
+    [HttpGet]
+    public async Task<ActionResult> GetInstanceFromName(string instanceName) {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Name == instanceName);
+
+        return instance != null ? Ok(instance) : NotFound();
     }
 }

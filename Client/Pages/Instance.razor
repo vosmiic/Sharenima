@@ -1,0 +1,8 @@
+@page "/g/{InstanceId}"
+@inherits Sharenima.Client.ComponentCode.Instance
+
+@if (SelectedInstance == null) {
+    <p>Loading...</p>
+} else {
+    <h3>Instance @SelectedInstance.Name</h3>
+}
