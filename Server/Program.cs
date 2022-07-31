@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
 using Sharenima.Server.Models;
@@ -10,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
-builder.Services.AddDbContext<GeneralDbContext>(options =>
+builder.Services.AddDbContextFactory<GeneralDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("General")));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

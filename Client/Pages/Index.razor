@@ -1,9 +1,9 @@
 ﻿@page "/"
+@inherits Sharenima.Client.ComponentCode.Index
 
 <PageTitle>Index</PageTitle>
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
-
-<SurveyPrompt Title="How is Blazor working for you?" />
+<h1>Create new instance</h1>
+<p>Instance name:</p>
+<input @bind="InstanceName"/>
+<button onclick="@CreateInstance()">Create Instance</button>
