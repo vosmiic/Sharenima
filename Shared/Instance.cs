@@ -1,4 +1,4 @@
-namespace Sharenima.Server.Models; 
+namespace Sharenima.Shared; 
 
 public class Instance : Base {
     public string Name { get; set; }

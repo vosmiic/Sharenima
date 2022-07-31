@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Sharenima.Server.Models; 
+namespace Sharenima.Shared; 
 
 public class Base {
     [Key]

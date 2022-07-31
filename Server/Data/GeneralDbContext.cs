@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Sharenima.Server.Models;
+using Sharenima.Shared;
 
 namespace Sharenima.Server.Data;
 
