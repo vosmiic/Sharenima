@@ -5,5 +5,5 @@
 
 <h1>Create new instance</h1>
 <p>Instance name:</p>
-<input @bind="InstanceName"/>
-<button onclick="@CreateInstance()">Create Instance</button>
+<MatTextField @bind-Value="InstanceName"/>
+<MatButton OnClick="@CreateInstance">Create Instance</MatButton>

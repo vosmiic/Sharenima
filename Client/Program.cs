@@ -1,3 +1,4 @@
+using MatBlazor;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -14,5 +15,6 @@ builder.Services.AddHttpClient("Sharenima.ServerAPI", client => client.BaseAddre
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Sharenima.ServerAPI"));
 
 builder.Services.AddApiAuthorization();
+builder.Services.AddMatBlazor();
 
 await builder.Build().RunAsync();
