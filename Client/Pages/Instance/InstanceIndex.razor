@@ -1,0 +1,19 @@
+@page "/g/{InstanceId}"
+@inherits Sharenima.Client.ComponentCode.Instance
+
+@if (SelectedInstance == null) {
+    <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
+} else {
+    <MatH3>Instance @SelectedInstance.Name</MatH3>
+    
+    <div class="mat-layout-grid">
+        <div class="mat-layout-grid-inner">
+            <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8" style="background-color: red">
+                
+            </div>
+            <div class="mat-layout-grid-cell mat-layout-grid-cell-span-4" style="background-color: blue">
+                <Queue InstanceId="@SelectedInstance.Id"></Queue>
+            </div>
+        </div>
+    </div>
+}
