@@ -1,0 +1,10 @@
+@page "/Queue"
+@inherits Sharenima.Client.ComponentCode.Queue
+
+<MatList>
+    <MatListItem>
+            <MatTextField TValue="string" @bind-Value="VideoUrl" Label="Video URL"/>
+            <MatIconButton Icon="add_to_queue" OnClick="AddVideoToQueue" />
+    </MatListItem>
+    <MatListDivider />
+</MatList>
