@@ -45,4 +45,12 @@ public class QueueController : ControllerBase {
         await context.SaveChangesAsync();
         return Ok();
     }
+
+    [HttpGet]
+    public async Task<ActionResult> GetInstanceQueue(Guid instanceId) {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        Instance? instance = await context.Instances.Where(instance => instance.Id == instanceId).Include(p => p.VideoQueue).FirstOrDefaultAsync();
+        if (instance == null) return BadRequest("Instance not found");
+        return Ok(instance.VideoQueue.ToList());
+    }
 }
