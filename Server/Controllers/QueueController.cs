@@ -37,7 +37,8 @@ public class QueueController : ControllerBase {
         Queue queue = new Queue {
             AddedById = Guid.Parse(userId),
             Name = youtubeVideoInfo.Title,
-            Url = videoUrl
+            Url = videoUrl,
+            Thumbnail = youtubeVideoInfo.ThumbnailUrl
         };
         
         instance.VideoQueue.Add(queue);

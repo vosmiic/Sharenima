@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using MatBlazor;
 using Microsoft.AspNetCore.Components;
 
@@ -12,10 +13,20 @@ public partial class Queue : ComponentBase {
     public Guid InstanceId { get; set; }
     
     public string VideoUrl { get; set; }
+    public ICollection<Sharenima.Shared.Queue>? CurrentQueue { get; set; }
 
-    /*protected override Task OnInitializedAsync() {
-        return null;
-    }*/
+    protected override async Task OnInitializedAsync() {
+        var httpResponse = await _httpClient.GetAsync($"queue?instanceId={InstanceId}");
+
+        if (!httpResponse.IsSuccessStatusCode) {
+            _toaster.Add("Could not load video queue", MatToastType.Danger, "Error");
+        }
+        
+        ICollection<Sharenima.Shared.Queue>? queueCollection = await httpResponse.Content.ReadFromJsonAsync<ICollection<Sharenima.Shared.Queue>>();
+        if (queueCollection != null) {
+            CurrentQueue = queueCollection;
+        }
+    }
 
     public async void AddVideoToQueue() {
         var createInstanceResponse = await _httpClient.PostAsync($"queue?instanceId={InstanceId}&videoUrl={VideoUrl}", null);
