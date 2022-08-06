@@ -3,8 +3,28 @@
 
 <MatList>
     <MatListItem>
-            <MatTextField TValue="string" @bind-Value="VideoUrl" Label="Video URL"/>
-            <MatIconButton Icon="add_to_queue" OnClick="AddVideoToQueue" />
+        <MatTextField TValue="string" @bind-Value="VideoUrl" Label="Video URL"/>
+        <MatIconButton Icon="add_to_queue" OnClick="AddVideoToQueue" />
     </MatListItem>
     <MatListDivider />
+    @if (CurrentQueue == null) {
+        <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
+    } else {
+        foreach (Sharenima.Shared.Queue queue in CurrentQueue) {
+            <MatListItem Class="list-item">
+                <MatCard>
+                    <MatCardContent>
+                        <MatCardMedia Wide="true" ImageUrl="@queue.Thumbnail"/>
+                        <MatBody1>@queue.Name</MatBody1>
+                    </MatCardContent>
+                </MatCard>
+            </MatListItem>
+        }
+    }
 </MatList>
+
+<style>
+    .list-item {
+        height: 120px;
+    }
+</style>
