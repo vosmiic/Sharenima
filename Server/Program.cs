@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
 using Sharenima.Server.Models;
+using Sharenima.Server.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,13 @@ builder.Services.AddAuthentication()
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddSignalR();
+
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "application/octet-stream" });
+});
 
 var app = builder.Build();
 
@@ -51,6 +60,8 @@ app.UseIdentityServer();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseResponseCompression();
+app.MapHub<QueueHub>("/queuehub");
 
 app.MapRazorPages();
 app.MapControllers();

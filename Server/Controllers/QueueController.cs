@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Sharenima.Client.ComponentCode;
 using Sharenima.Server.Data;
 using Sharenima.Server.Helpers;
 using Sharenima.Server.Models;
+using Sharenima.Server.SignalR;
 using Instance = Sharenima.Shared.Instance;
 using Queue = Sharenima.Shared.Queue;
 
@@ -16,10 +18,14 @@ namespace Sharenima.Server.Controllers;
 public class QueueController : ControllerBase {
     private readonly HttpClient _httpClient;
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
+    private readonly IHubContext<QueueHub> _hubContext;
 
-    public QueueController(HttpClient httpClient, IDbContextFactory<GeneralDbContext> contextFactory) {
+    public QueueController(HttpClient httpClient,
+        IDbContextFactory<GeneralDbContext> contextFactory,
+        IHubContext<QueueHub> hubContext) {
         _httpClient = httpClient;
         _contextFactory = contextFactory;
+        _hubContext = hubContext;
     }
 
     [HttpPost]
@@ -44,6 +50,9 @@ public class QueueController : ControllerBase {
         instance.VideoQueue.Add(queue);
 
         await context.SaveChangesAsync();
+
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
+        
         return Ok();
     }
 
