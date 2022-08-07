@@ -11,7 +11,7 @@
         <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
     } else {
         foreach (Sharenima.Shared.Queue queue in CurrentQueue) {
-            <MatListItem @key="queue.Id" Class="list-item">
+            <MatListItem @key="queue.Id" Style="height: unset">
                 <MatCard>
                     <MatCardContent>
                         <MatCardMedia Wide="true" ImageUrl="@queue.Thumbnail"/>
@@ -22,9 +22,3 @@
         }
     }
 </MatList>
-
-<style>
-    .list-item {
-        height: 120px;
-    }
-</style>
