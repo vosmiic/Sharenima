@@ -63,4 +63,15 @@ public class QueueController : ControllerBase {
         if (instance == null) return BadRequest("Instance not found");
         return Ok(instance.VideoQueue.ToList());
     }
+
+    [HttpDelete]
+    public async Task<ActionResult> DeleteVideoFromQueue(Guid instanceId, Guid queueId) {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        Queue? queue = await context.Queues.FirstOrDefaultAsync(queue => queue.Id == queueId);
+        if (queue == null) return NotFound("Queue does not exist");
+        context.Remove(queue);
+        await context.SaveChangesAsync();
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("RemoveVideo", queue.Id);
+        return Ok();
+    }
 }

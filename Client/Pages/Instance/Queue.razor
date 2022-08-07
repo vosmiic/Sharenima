@@ -17,6 +17,9 @@
                         <MatCardMedia Wide="true" ImageUrl="@queue.Thumbnail"/>
                         <MatBody1>@queue.Name</MatBody1>
                     </MatCardContent>
+                    <MatCardActions>
+                        <MatButton OnClick="() => RemoveFromVideoQueue(queue.Id)">Remove</MatButton>
+                    </MatCardActions>
                 </MatCard>
             </MatListItem>
         }

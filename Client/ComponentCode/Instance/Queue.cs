@@ -34,10 +34,18 @@ public partial class Queue : ComponentBase {
     }
 
     protected async void AddVideoToQueue() {
-        var createInstanceResponse = await _httpClient.PostAsync($"queue?instanceId={InstanceId}&videoUrl={VideoUrl}", null);
+        var addVideoResponse = await _httpClient.PostAsync($"queue?instanceId={InstanceId}&videoUrl={VideoUrl}", null);
 
-        if (!createInstanceResponse.IsSuccessStatusCode) {
-            _toaster.Add($"Could not add video; {createInstanceResponse.ReasonPhrase}", MatToastType.Danger, "Error");
+        if (!addVideoResponse.IsSuccessStatusCode) {
+            _toaster.Add($"Could not add video; {addVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
+        }
+    }
+
+    protected async void RemoveFromVideoQueue(Guid queueId) {
+        var removeVideoResponse = await _httpClient.DeleteAsync($"queue?instanceId={InstanceId}&queueId={queueId}");
+
+        if (!removeVideoResponse.IsSuccessStatusCode) {
+            _toaster.Add($"Could not remove video; {removeVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
         }
     }
 
@@ -64,6 +72,14 @@ public partial class Queue : ComponentBase {
                 CurrentQueue = new List<Sharenima.Shared.Queue> { queue };
             }
             StateHasChanged();
+        });
+
+        _hubConnection.On<Guid>("RemoveVideo", (queueId) => {
+            Sharenima.Shared.Queue? queue = CurrentQueue?.FirstOrDefault(queue => queue.Id == queueId);
+            if (queue != null) {
+                CurrentQueue.Remove(queue);
+                StateHasChanged();
+            }
         });
     }
 }
