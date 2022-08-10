@@ -9,10 +9,10 @@
     <div class="mat-layout-grid">
         <div class="mat-layout-grid-inner">
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8" style="background-color: red">
-                
+                <Player InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection"></Player>
             </div>
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-4" style="background-color: blue">
-                <Queue InstanceId="@SelectedInstance.Id"></Queue>
+                <Queue InstanceId="@SelectedInstance.Id" CurrentQueue="@CurrentQueue" HubConnection="@_hubConnection"></Queue>
             </div>
         </div>
     </div>
