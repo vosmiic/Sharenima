@@ -14,22 +14,17 @@ public partial class Queue : ComponentBase {
     private NavigationManager _navigationManager { get; set; }
     [Parameter]
     public Guid InstanceId { get; set; }
-    
-    public string VideoUrl { get; set; }
+    [Parameter]
     public ICollection<Sharenima.Shared.Queue>? CurrentQueue { get; set; }
     
-    
+    public string VideoUrl { get; set; }
 
-    private HubConnection? _hubConnection;
+    [Parameter]
+    public HubConnection? HubConnection { get; set; }
 
     protected override async Task OnInitializedAsync() {
         await GetQueue();
         
-        _hubConnection = new HubConnectionBuilder()
-            .WithUrl(_navigationManager.ToAbsoluteUri("/queuehub"))
-            .Build();
-        
-        await _hubConnection.StartAsync();
         await Hub();
     }
 
@@ -63,9 +58,9 @@ public partial class Queue : ComponentBase {
     }
 
     private async Task Hub() {
-        await _hubConnection.SendAsync("JoinGroup", InstanceId.ToString());
+        await HubConnection.SendAsync("JoinGroup", InstanceId.ToString());
 
-        _hubConnection.On<Sharenima.Shared.Queue>("AnnounceVideo", (queue) => {
+        HubConnection.On<Sharenima.Shared.Queue>("AnnounceVideo", (queue) => {
             if (CurrentQueue != null) {
                 CurrentQueue.Add(queue);
             } else {
@@ -74,7 +69,7 @@ public partial class Queue : ComponentBase {
             StateHasChanged();
         });
 
-        _hubConnection.On<Guid>("RemoveVideo", (queueId) => {
+        HubConnection.On<Guid>("RemoveVideo", (queueId) => {
             Sharenima.Shared.Queue? queue = CurrentQueue?.FirstOrDefault(queue => queue.Id == queueId);
             if (queue != null) {
                 CurrentQueue.Remove(queue);
