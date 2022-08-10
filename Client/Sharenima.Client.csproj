@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Shared\Sharenima.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="wwwroot\JS\YoutubeApi.js" />
+  </ItemGroup>
+
 </Project>
