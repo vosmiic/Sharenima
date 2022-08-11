@@ -16,7 +16,7 @@ var player;
 function onYouTubeIframeAPIReady() {
     if (typeof YT !== 'undefined') {
         player = new YT.Player('player', {
-            videoId: '668nUCeBHyY',
+            videoId: 'xhZQ46ZRzq0',
             playerVars: {
                 'playsinline': 1
             },
@@ -27,6 +27,16 @@ function onYouTubeIframeAPIReady() {
     }
 }
 
+setInterval(function () {
+    if (typeof YT !== 'undefined') {
+        var currentTime = getCurrentTime();
+        console.log(currentTime);
+        if (currentTime) {
+            dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
+        }
+    }
+}, 500)
+
 //functions
 function playYT() {
     player.playVideo();
@@ -34,6 +44,14 @@ function playYT() {
 
 function pauseYT() {
     player.pauseVideo();
+}
+
+function getCurrentTime() {
+    return player.getCurrentTime();
+}
+
+function setCurrentTime(time) {
+    player.seekTo(time, true);
 }
 
 function stateChange(event) {
