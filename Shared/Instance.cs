@@ -10,4 +10,5 @@ public class Instance : Base {
         get => videoQueues ?? (videoQueues = new Collection<Queue>());
         protected set => videoQueues = value;
     }
+    public TimeSpan VideoTime { get; set; }
 }
