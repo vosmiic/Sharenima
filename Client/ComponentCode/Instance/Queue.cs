@@ -12,10 +12,16 @@ public partial class Queue : ComponentBase {
     protected IMatToaster _toaster { get; set; }
     [Inject]
     private NavigationManager _navigationManager { get; set; }
+    [Inject]
+    private RefreshService RefreshService { get; set; }
     [Parameter]
     public Guid InstanceId { get; set; }
     [Parameter]
     public ICollection<Sharenima.Shared.Queue>? CurrentQueue { get; set; }
+    [Parameter]
+    public EventCallback<ICollection<Sharenima.Shared.Queue>?> CurrentQueueChanged { get; set; }
+    [Parameter]
+    public Player? PlayerSibling { get; set; }
     
     public string VideoUrl { get; set; }
 
@@ -53,26 +59,31 @@ public partial class Queue : ComponentBase {
         
         ICollection<Sharenima.Shared.Queue>? queueCollection = await httpResponse.Content.ReadFromJsonAsync<ICollection<Sharenima.Shared.Queue>>();
         if (queueCollection != null) {
-            CurrentQueue = queueCollection;
+            await CurrentQueueChanged.InvokeAsync(queueCollection);
+            /*CurrentQueue = queueCollection;
+            Console.WriteLine(CurrentQueue?.FirstOrDefault()?.Url);*/
+            RefreshService.CallRequestRefresh();
         }
     }
 
     private async Task Hub() {
         await HubConnection.SendAsync("JoinGroup", InstanceId.ToString());
 
-        HubConnection.On<Sharenima.Shared.Queue>("AnnounceVideo", (queue) => {
+        HubConnection.On<Sharenima.Shared.Queue>("AnnounceVideo", async (queue) => {
             if (CurrentQueue != null) {
                 CurrentQueue.Add(queue);
             } else {
                 CurrentQueue = new List<Sharenima.Shared.Queue> { queue };
             }
+            await CurrentQueueChanged.InvokeAsync(CurrentQueue);
             StateHasChanged();
         });
 
-        HubConnection.On<Guid>("RemoveVideo", (queueId) => {
+        HubConnection.On<Guid>("RemoveVideo", async (queueId) => {
             Sharenima.Shared.Queue? queue = CurrentQueue?.FirstOrDefault(queue => queue.Id == queueId);
             if (queue != null) {
                 CurrentQueue.Remove(queue);
+                await CurrentQueueChanged.InvokeAsync(CurrentQueue);
                 StateHasChanged();
             }
         });
