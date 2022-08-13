@@ -6,9 +6,11 @@ namespace Sharenima.Client.ComponentCode;
 
 public partial class Player : ComponentBase {
     [Inject] private IJSRuntime _jsRuntime { get; set; }
+    [Inject] private RefreshService RefreshService { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public TimeSpan VideoTime { get; set; }
+    [Parameter] public string? VideoId { get; set; }
     private DotNetObjectReference<Player>? objRef;
 
     [JSInvokable]
@@ -28,11 +30,17 @@ public partial class Player : ComponentBase {
         }
     }
 
+    [JSInvokable]
+    public string RequestVideo() {
+        int lastIndex = VideoId.LastIndexOf("?v=", StringComparison.CurrentCulture) + 3;
+        return VideoId.Substring(lastIndex, VideoId.Length - lastIndex);
+    }
+
     protected override async Task OnInitializedAsync() {
-        await _jsRuntime.InvokeVoidAsync("runYoutubeApi");
+        RefreshService.RefreshRequested += RefreshState;
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
-        await _jsRuntime.InvokeVoidAsync("onYouTubeIframeAPIReady");
+        await _jsRuntime.InvokeVoidAsync("runYoutubeApi");
         await Hub();
     }
 
@@ -59,5 +67,9 @@ public partial class Player : ComponentBase {
             if ((newTime - VideoTime) > TimeSpan.FromMilliseconds(500))
                 await _jsRuntime.InvokeVoidAsync("setCurrentTime", newTime.TotalSeconds);
         });
+    }
+
+    private void RefreshState() {
+        StateHasChanged();
     }
 }
