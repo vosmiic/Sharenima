@@ -23,8 +23,8 @@ public partial class Player : ComponentBase {
     [JSInvokable]
     public void ProgressChange(double newTime) {
         TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
-        var difference = newVideoTime - VideoTime;
-        if (difference > TimeSpan.FromMilliseconds(500)) {
+        var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
+        if (difference is > 500 or < -500) {
             HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime);
             VideoTime = newVideoTime;
         }
