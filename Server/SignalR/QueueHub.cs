@@ -16,7 +16,15 @@ public class QueueHub : Hub {
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
     }
 
-    public async Task SendStateChange(string groupName, int state) {
+    public async Task SendStateChange(string groupName, int state, Guid queueId) {
+        if (state == 0) {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
+            if (queue != null) {
+                context.Remove(queue);
+                await context.SaveChangesAsync();
+            }
+        }
         await Clients.Group(groupName).SendAsync("ReceiveStateChange", state);
     }
 

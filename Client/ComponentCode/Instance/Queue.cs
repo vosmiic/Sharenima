@@ -13,7 +13,7 @@ public partial class Queue : ComponentBase {
     [Inject]
     private NavigationManager _navigationManager { get; set; }
     [Inject]
-    private RefreshService RefreshService { get; set; }
+    private QueuePlayerService QueuePlayerService { get; set; }
     [Parameter]
     public Guid InstanceId { get; set; }
     [Parameter]
@@ -62,7 +62,7 @@ public partial class Queue : ComponentBase {
             await CurrentQueueChanged.InvokeAsync(queueCollection);
             /*CurrentQueue = queueCollection;
             Console.WriteLine(CurrentQueue?.FirstOrDefault()?.Url);*/
-            RefreshService.CallRequestRefresh();
+            QueuePlayerService.CallRequestRefresh();
         }
     }
 
@@ -85,6 +85,15 @@ public partial class Queue : ComponentBase {
                 CurrentQueue.Remove(queue);
                 await CurrentQueueChanged.InvokeAsync(CurrentQueue);
                 StateHasChanged();
+            }
+        });
+
+        HubConnection.On<int>("ReceiveStateChange", async (state) => {
+            if (state == 0) {
+                CurrentQueue.Remove(CurrentQueue.First());
+                await CurrentQueueChanged.InvokeAsync(CurrentQueue);
+                StateHasChanged();
+                QueuePlayerService.CallChangeVideo();
             }
         });
     }

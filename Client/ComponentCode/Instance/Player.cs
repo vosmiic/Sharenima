@@ -6,17 +6,17 @@ namespace Sharenima.Client.ComponentCode;
 
 public partial class Player : ComponentBase {
     [Inject] private IJSRuntime _jsRuntime { get; set; }
-    [Inject] private RefreshService RefreshService { get; set; }
+    [Inject] private QueuePlayerService QueuePlayerService { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public TimeSpan VideoTime { get; set; }
-    [Parameter] public string? VideoId { get; set; }
+    [Parameter] public Sharenima.Shared.Queue? Video { get; set; }
     private DotNetObjectReference<Player>? objRef;
 
     [JSInvokable]
     public void StateChange(int value) {
         if (value is > -1 and < 3) {
-            HubConnection.SendAsync("SendStateChange", InstanceId, value);
+            HubConnection.SendAsync("SendStateChange", InstanceId, value, Video.Id);
         }
     }
 
@@ -32,12 +32,13 @@ public partial class Player : ComponentBase {
 
     [JSInvokable]
     public string RequestVideo() {
-        int lastIndex = VideoId.LastIndexOf("?v=", StringComparison.CurrentCulture) + 3;
-        return VideoId.Substring(lastIndex, VideoId.Length - lastIndex);
+        int lastIndex = Video.Url.LastIndexOf("?v=", StringComparison.CurrentCulture) + 3;
+        return Video.Url.Substring(lastIndex, Video.Url.Length - lastIndex);
     }
 
     protected override async Task OnInitializedAsync() {
-        RefreshService.RefreshRequested += RefreshState;
+        QueuePlayerService.RefreshRequested += RefreshState;
+        QueuePlayerService.ChangeVideo += ChangeVideo;
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
         await _jsRuntime.InvokeVoidAsync("runYoutubeApi");
@@ -71,5 +72,9 @@ public partial class Player : ComponentBase {
 
     private void RefreshState() {
         StateHasChanged();
+    }
+
+    private async void ChangeVideo() {
+        await _jsRuntime.InvokeVoidAsync("loadVideo", RequestVideo());
     }
 }
