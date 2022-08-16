@@ -12,6 +12,7 @@ public partial class Player : ComponentBase {
     [Parameter] public TimeSpan VideoTime { get; set; }
     [Parameter] public Sharenima.Shared.Queue? Video { get; set; }
     private DotNetObjectReference<Player>? objRef;
+    private bool _initialVideoLoad = true;
 
     [JSInvokable]
     public void StateChange(int value) {
@@ -21,7 +22,11 @@ public partial class Player : ComponentBase {
     }
 
     [JSInvokable]
-    public void ProgressChange(double newTime) {
+    public async void ProgressChange(double newTime) {
+        if (_initialVideoLoad) {
+            if (await SendProgressChange(VideoTime.TotalSeconds))
+                _initialVideoLoad = false;
+        }
         TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
         var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
         if (difference is > 500 or < -500) {
@@ -66,8 +71,12 @@ public partial class Player : ComponentBase {
 
         HubConnection.On<TimeSpan>("ReceiveProgressChange", async (newTime) => {
             if ((newTime - VideoTime) > TimeSpan.FromMilliseconds(500))
-                await _jsRuntime.InvokeVoidAsync("setCurrentTime", newTime.TotalSeconds);
+                await SendProgressChange(newTime.TotalSeconds);
         });
+    }
+
+    private async Task<bool> SendProgressChange(double totalSeconds) {
+        return await _jsRuntime.InvokeAsync<bool>("setCurrentTime", totalSeconds);
     }
 
     private void RefreshState() {

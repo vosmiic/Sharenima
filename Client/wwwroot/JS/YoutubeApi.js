@@ -37,7 +37,6 @@ function onYouTubeIframeAPIReady() {
 setInterval(function () {
     if (typeof YT !== 'undefined') {
         var currentTime = getCurrentTime();
-        console.log(currentTime);
         if (currentTime) {
             dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
         }
@@ -58,7 +57,13 @@ function getCurrentTime() {
 }
 
 function setCurrentTime(time) {
-    player.seekTo(time, true);
+    let success = true;
+    try {
+        player.seekTo(time, true);
+    } catch (e) {
+        success = false;
+    }
+    return success;
 }
 
 function loadVideo(videoId) {
