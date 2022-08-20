@@ -1,7 +1,12 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json.Serialization;
 using MatBlazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
+using Sharenima.Shared.Helpers;
+using File = Sharenima.Shared.File;
 
 namespace Sharenima.Client.ComponentCode; 
 
@@ -39,6 +44,26 @@ public partial class Queue : ComponentBase {
 
         if (!addVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not add video; {addVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
+        }
+    }
+
+    protected async void UploadVideoToQueue(IMatFileUploadEntry[] files) {
+        foreach (IMatFileUploadEntry matFileUploadEntry in files) {
+            if (!matFileUploadEntry.Type.StartsWith("video"))
+                _toaster.Add("File is not a recognised video type", MatToastType.Danger, "Upload Error");
+            var stream = new MemoryStream();
+            await matFileUploadEntry.WriteToStreamAsync(stream);
+            string base64File = Convert.ToBase64String(stream.ToArray());
+            File file = new File {
+                fileBase64 = base64File,
+                fileName = matFileUploadEntry.Name
+            };
+            var uploadVideoResponse = await _httpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}", JsonConverters.ConvertObjectToHttpContent(file));
+            
+
+            if (!uploadVideoResponse.IsSuccessStatusCode) {
+                _toaster.Add($"Could not upload video; {uploadVideoResponse.ReasonPhrase}", MatToastType.Danger, "Upload Error");
+            }
         }
     }
 
