@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Sharenima.Client.ComponentCode;
 using Sharenima.Server.Data;
 using Sharenima.Server.Helpers;
 using Sharenima.Server.Models;
 using Sharenima.Server.SignalR;
+using File = Sharenima.Shared.File;
 using Instance = Sharenima.Shared.Instance;
 using Queue = Sharenima.Shared.Queue;
 
@@ -53,6 +53,39 @@ public class QueueController : ControllerBase {
 
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
         
+        return Ok();
+    }
+
+    [HttpPost]
+    [Authorize]
+    [Route("fileUpload")]
+    public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, [FromBody] File fileData) {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == instanceId);
+        if (instance == null)
+            return BadRequest("Instance not found");
+        
+        string? downloadLocation = context.Settings.FirstOrDefault(setting => setting.Key == SettingKey.DownloadLocation)?.Value;
+        if (downloadLocation == null) return BadRequest("User has not setup file uploads");
+        byte[] bytes = Convert.FromBase64String(fileData.fileBase64);
+        DirectoryInfo downloadDirectory = new DirectoryInfo(Path.Combine(downloadLocation, instance.Name));
+        if (!downloadDirectory.Exists) {
+            Directory.CreateDirectory(downloadDirectory.FullName);
+        }
+
+        Queue queue = new Queue {
+            Id = new Guid(),
+            AddedById = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)),
+            InstanceId = instance.Id,
+            Name = fileData.fileName
+        };
+
+        queue.Url = Path.Combine(downloadDirectory.FullName, queue.Id.ToString());
+        await System.IO.File.WriteAllBytesAsync(queue.Url, bytes);
+        queue.Thumbnail = await FileHelper.GetVideoThumbnail(queue.Url, downloadDirectory.FullName, queue.Id.ToString());
+
+        context.Queues.Add(queue);
+        await context.SaveChangesAsync();
         return Ok();
     }
 
