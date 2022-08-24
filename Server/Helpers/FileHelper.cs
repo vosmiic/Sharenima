@@ -11,6 +11,6 @@ public class FileHelper {
         if (duration == null) return null; //todo log here
         var thumbnailRandomPoint = new Random().Next(0, Convert.ToInt32(Convert.ToDouble(duration.Replace("\n", ""))));
         var createThumbnailTask = await FfmpegHelper.FfmpegCommand(true, $"-i {filePath} -vf \"scale=150:150:force_original_aspect_ratio=decrease\" -ss {thumbnailRandomPoint} -vframes 1 {Path.Combine(folderPath, fileName)}.jpg");
-        return createThumbnailTask != null ? $"{Path.Combine(folderPath, fileName)}.jpg" : null;
+        return createThumbnailTask != null ? $"{fileName}.jpg" : null;
     }
 }

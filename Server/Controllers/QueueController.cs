@@ -11,7 +11,7 @@ using File = Sharenima.Shared.File;
 using Instance = Sharenima.Shared.Instance;
 using Queue = Sharenima.Shared.Queue;
 
-namespace Sharenima.Server.Controllers; 
+namespace Sharenima.Server.Controllers;
 
 [ApiController]
 [Route("[controller]")]
@@ -33,7 +33,7 @@ public class QueueController : ControllerBase {
     public async Task<ActionResult> AddVideoToInstance(Guid instanceId, string videoUrl) {
         YoutubeVideo? youtubeVideoInfo = await OnlineVideoHelpers.GetYoutubeVideoInfo(_httpClient, videoUrl);
         if (youtubeVideoInfo == null) return BadRequest("Provided video URL is incorrect");
-        
+
         await using var context = await _contextFactory.CreateDbContextAsync();
         Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == instanceId);
         if (instance == null) return NotFound("Instance not found");
@@ -46,13 +46,13 @@ public class QueueController : ControllerBase {
             Url = videoUrl,
             Thumbnail = youtubeVideoInfo.ThumbnailUrl
         };
-        
+
         instance.VideoQueue.Add(queue);
 
         await context.SaveChangesAsync();
 
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
-        
+
         return Ok();
     }
 
@@ -64,28 +64,37 @@ public class QueueController : ControllerBase {
         Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == instanceId);
         if (instance == null)
             return BadRequest("Instance not found");
-        
+
         string? downloadLocation = context.Settings.FirstOrDefault(setting => setting.Key == SettingKey.DownloadLocation)?.Value;
         if (downloadLocation == null) return BadRequest("User has not setup file uploads");
         byte[] bytes = Convert.FromBase64String(fileData.fileBase64);
         DirectoryInfo downloadDirectory = new DirectoryInfo(Path.Combine(downloadLocation, instance.Name));
+        string hostedLocation = Path.Combine("/files", instance.Name);
         if (!downloadDirectory.Exists) {
             Directory.CreateDirectory(downloadDirectory.FullName);
         }
 
         Queue queue = new Queue {
-            Id = new Guid(),
+            Id = Guid.NewGuid(),
             AddedById = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)),
             InstanceId = instance.Id,
             Name = fileData.fileName
         };
 
-        queue.Url = Path.Combine(downloadDirectory.FullName, queue.Id.ToString());
-        await System.IO.File.WriteAllBytesAsync(queue.Url, bytes);
-        queue.Thumbnail = await FileHelper.GetVideoThumbnail(queue.Url, downloadDirectory.FullName, queue.Id.ToString());
+        int lastIndexOfExtension = fileData.fileName.LastIndexOf(".", StringComparison.CurrentCulture);
+        string extension = fileData.fileName.Substring(lastIndexOfExtension, fileData.fileName.Length - lastIndexOfExtension);
+
+        string videoDownloadLocation = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
+        queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
+        await System.IO.File.WriteAllBytesAsync(videoDownloadLocation, bytes);
+        string? thumbnailFileName = await FileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
+        queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
 
         context.Queues.Add(queue);
         await context.SaveChangesAsync();
+
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
+
         return Ok();
     }
 

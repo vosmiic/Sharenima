@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Sharenima.Server.Data;
 using Sharenima.Server.Models;
 using Sharenima.Server.SignalR;
@@ -53,6 +54,13 @@ app.UseHttpsRedirection();
 
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
+
+using var scope = app.Services.CreateScope();
+GeneralDbContext context = scope.ServiceProvider.GetRequiredService<GeneralDbContext>();
+app.UseStaticFiles(new StaticFileOptions {
+    FileProvider = new PhysicalFileProvider(context.Settings.FirstOrDefault(setting => setting.Key == SettingKey.DownloadLocation).Value),
+    RequestPath = "/files"
+});
 
 app.UseRouting();
 
