@@ -1,7 +1,4 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json.Serialization;
 using MatBlazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -56,7 +53,8 @@ public partial class Queue : ComponentBase {
             string base64File = Convert.ToBase64String(stream.ToArray());
             File file = new File {
                 fileBase64 = base64File,
-                fileName = matFileUploadEntry.Name
+                fileName = matFileUploadEntry.Name,
+                MediaType = matFileUploadEntry.Type
             };
             var uploadVideoResponse = await _httpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}", JsonConverters.ConvertObjectToHttpContent(file));
             
@@ -102,6 +100,8 @@ public partial class Queue : ComponentBase {
             }
             await CurrentQueueChanged.InvokeAsync(CurrentQueue);
             StateHasChanged();
+            if (CurrentQueue.Count == 1)
+                QueuePlayerService.CallRequestRefresh();
         });
 
         HubConnection.On<Guid>("RemoveVideo", async (queueId) => {
