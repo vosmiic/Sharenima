@@ -81,7 +81,8 @@ public class QueueController : ControllerBase {
             AddedById = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)),
             InstanceId = instance.Id,
             Name = fileData.fileName,
-            VideoType = VideoType.FileUpload
+            VideoType = VideoType.FileUpload,
+            MediaType = fileData.MediaType
         };
 
         int lastIndexOfExtension = fileData.fileName.LastIndexOf(".", StringComparison.CurrentCulture);
