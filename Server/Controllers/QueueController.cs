@@ -7,6 +7,7 @@ using Sharenima.Server.Data;
 using Sharenima.Server.Helpers;
 using Sharenima.Server.Models;
 using Sharenima.Server.SignalR;
+using Sharenima.Shared;
 using File = Sharenima.Shared.File;
 using Instance = Sharenima.Shared.Instance;
 using Queue = Sharenima.Shared.Queue;
@@ -44,7 +45,8 @@ public class QueueController : ControllerBase {
             AddedById = Guid.Parse(userId),
             Name = youtubeVideoInfo.Title,
             Url = videoUrl,
-            Thumbnail = youtubeVideoInfo.ThumbnailUrl
+            Thumbnail = youtubeVideoInfo.ThumbnailUrl,
+            VideoType = VideoType.YouTube
         };
 
         instance.VideoQueue.Add(queue);
@@ -78,7 +80,8 @@ public class QueueController : ControllerBase {
             Id = Guid.NewGuid(),
             AddedById = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)),
             InstanceId = instance.Id,
-            Name = fileData.fileName
+            Name = fileData.fileName,
+            VideoType = VideoType.FileUpload
         };
 
         int lastIndexOfExtension = fileData.fileName.LastIndexOf(".", StringComparison.CurrentCulture);

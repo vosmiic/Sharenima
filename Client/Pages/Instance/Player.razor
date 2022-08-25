@@ -1,8 +1,17 @@
 @page "/Player"
+@using Sharenima.Shared
 @inherits Sharenima.Client.ComponentCode.Player
 @if (Video != null) {
-    <div id="player"></div>
-    <MatButton OnClick="Play"></MatButton>
+    switch (Video.VideoType) {
+        case VideoType.YouTube:
+            <div id="player"></div>
+            break;
+        case VideoType.FileUpload:
+            <video>
+            </video>
+        break;
+    }
+    
 } else {
     <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
 }
