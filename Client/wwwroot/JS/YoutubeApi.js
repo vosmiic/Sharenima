@@ -28,14 +28,14 @@ function onYouTubeIframeAPIReady() {
                 'autoplay': 1
             },
             events: {
-                'onStateChange': stateChange
+                'onStateChange': youtubeStateChange
             }
         });
     });
 }
 
 setInterval(function () {
-    if (typeof YT !== 'undefined') {
+    if (typeof YT !== 'undefined' && player !== 'undefined') {
         var currentTime = getCurrentTime();
         if (currentTime) {
             dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
@@ -70,6 +70,6 @@ function loadVideo(videoId) {
     player.loadVideoById(videoId);
 }
 
-function stateChange(event) {
+function youtubeStateChange(event) {
     dotNetHelper.invokeMethodAsync('StateChange', event.data);
 }

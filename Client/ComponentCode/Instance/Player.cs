@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
+using Sharenima.Shared;
 
 namespace Sharenima.Client.ComponentCode;
 
@@ -46,12 +47,19 @@ public partial class Player : ComponentBase {
         QueuePlayerService.ChangeVideo += ChangeVideo;
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
-        await _jsRuntime.InvokeVoidAsync("runYoutubeApi");
+
         await Hub();
     }
 
-    protected async Task Play() {
-        await _jsRuntime.InvokeVoidAsync("playYT");
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        switch (Video?.VideoType) {
+            case VideoType.YouTube:
+                await _jsRuntime.InvokeVoidAsync("runYoutubeApi");
+                break;
+            case VideoType.FileUpload:
+                await _jsRuntime.InvokeVoidAsync("loadVideoFunctions");
+                break;
+        }
     }
 
     private async Task Hub() {
@@ -61,10 +69,24 @@ public partial class Player : ComponentBase {
                     //unload player
                     break;
                 case 1:
-                    await _jsRuntime.InvokeVoidAsync("playYT");
+                    switch (Video?.VideoType) {
+                        case VideoType.YouTube:
+                            await _jsRuntime.InvokeVoidAsync("playYT");
+                            break;
+                        case VideoType.FileUpload:
+                            await _jsRuntime.InvokeVoidAsync("playFileUpload");
+                            break;
+                    }
                     break;
                 case 2:
-                    await _jsRuntime.InvokeVoidAsync("pauseYT");
+                    switch (Video?.VideoType) {
+                        case VideoType.YouTube:
+                            await _jsRuntime.InvokeVoidAsync("pauseYT");
+                            break;
+                        case VideoType.FileUpload:
+                            await _jsRuntime.InvokeVoidAsync("pauseFileUpload");
+                            break;
+                    }
                     break;
             }
         });
