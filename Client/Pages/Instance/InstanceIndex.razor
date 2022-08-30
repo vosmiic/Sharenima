@@ -9,7 +9,9 @@
     <div class="mat-layout-grid">
         <div class="mat-layout-grid-inner">
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8" style="background-color: red">
-                <Player InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime" Video="@CurrentQueue?.FirstOrDefault()"></Player>
+                @if (CurrentQueue?.FirstOrDefault() != null) {
+                    <Player InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime" Video="@CurrentQueue?.FirstOrDefault()"></Player>
+                }
             </div>
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-4" style="background-color: blue">
                 <Queue InstanceId="@SelectedInstance.Id" @bind-CurrentQueue="@CurrentQueue" HubConnection="@_hubConnection"></Queue>
