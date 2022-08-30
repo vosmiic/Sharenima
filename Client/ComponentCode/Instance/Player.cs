@@ -42,6 +42,14 @@ public partial class Player : ComponentBase {
         return Video.Url.Substring(lastIndex, Video.Url.Length - lastIndex);
     }
 
+    /// <summary>
+    /// Gets the current time of the video stored in the database. Requested when the video frame has loaded in to keep it up to date.
+    /// </summary>
+    /// <returns>Current video time.</returns>
+    [JSInvokable]
+    public double RequestStoredVideoTime() =>
+        VideoTime.TotalSeconds;
+
     protected override async Task OnInitializedAsync() {
         QueuePlayerService.RefreshRequested += RefreshState;
         QueuePlayerService.ChangeVideo += ChangeVideo;
@@ -99,7 +107,14 @@ public partial class Player : ComponentBase {
     }
 
     private async Task<bool> SendProgressChange(double totalSeconds) {
-        return await _jsRuntime.InvokeAsync<bool>("setCurrentTime", totalSeconds);
+        switch (Video?.VideoType) {
+            case VideoType.YouTube:
+                return await _jsRuntime.InvokeAsync<bool>("setCurrentYoutubeVideoTime", totalSeconds);
+            case VideoType.FileUpload:
+                return await _jsRuntime.InvokeAsync<bool>("setCurrentUploadedVideoTime", totalSeconds);
+        }
+
+        return false;
     }
 
     private void RefreshState() {
