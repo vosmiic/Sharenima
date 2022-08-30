@@ -56,7 +56,7 @@ function getCurrentTime() {
     return player.getCurrentTime();
 }
 
-function setCurrentTime(time) {
+function setCurrentYoutubeVideoTime(time) {
     let success = true;
     try {
         player.seekTo(time, true);
