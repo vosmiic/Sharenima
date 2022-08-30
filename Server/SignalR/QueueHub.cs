@@ -21,7 +21,11 @@ public class QueueHub : Hub {
             await using var context = await _contextFactory.CreateDbContextAsync();
             Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
             if (queue != null) {
+                Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
                 context.Remove(queue);
+                if (instance != null) {
+                    instance.VideoTime = TimeSpan.Zero;
+                }
                 await context.SaveChangesAsync();
             }
         }
