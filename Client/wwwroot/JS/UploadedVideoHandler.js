@@ -6,25 +6,28 @@ function setDotNetHelper(value) {
 
 let video;
 let lastExecution = new Date();
+let videoPlaying;
 
 function loadVideoFunctions() {
     video = document.querySelector('#mediaPlayer');
 
     video.addEventListener('play', function () {
+        videoPlaying = true;
         uploadedVideoStateChange(1);
     });
 
     video.addEventListener('pause', function () {
+        videoPlaying = false;
         uploadedVideoStateChange(2);
     });
     
     video.addEventListener('ended', function () {
+        videoPlaying = false;
         uploadedVideoStateChange(0)
     });
     
     video.addEventListener('seeked', function () {
         if (new Date() - lastExecution >= 100) {
-            console.log("seeked");
             updateBackendProgress();
         }
     });
@@ -46,11 +49,15 @@ function updateBackendProgress() {
 }
 
 function playFileUpload() {
-    video.play();
+    if (video.paused && !videoPlaying) {
+        video.play();
+    }
 }
 
 function pauseFileUpload() {
-    video.pause();
+    if (!video.paused && videoPlaying) {
+        video.pause();
+    }
 }
 
 function setCurrentUploadedVideoTime(time) {
@@ -64,7 +71,7 @@ function setCurrentUploadedVideoTime(time) {
 }
 
 setInterval(function () {
-    if (typeof video !== 'undefined' && video !== 'undefined') {
+    if (typeof video !== 'undefined' && video !== 'undefined' && !video.ended) {
         var currentTime = video.currentTime;
         if (currentTime) {
             dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
