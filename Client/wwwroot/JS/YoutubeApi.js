@@ -1,5 +1,7 @@
-function runYoutubeApi() {
+let initialVideoId;
+function runYoutubeApi(videoId) {
 //YouTube embed with YouTube Iframe API
+    initialVideoId = videoId;
     setTimeout(() => {
         var tag = document.createElement('script');
 
@@ -18,19 +20,17 @@ function setDotNetHelper(value) {
 // YouTube embed player details
 var player;
 function onYouTubeIframeAPIReady() {
-    dotNetHelper.invokeMethodAsync('RequestVideo').then((videoId) => {
-        player = new YT.Player('player', {
-            height: '390',
-            width: '640',
-            videoId: videoId,
-            playerVars: {
-                'playsinline': 1,
-                'autoplay': 1
-            },
-            events: {
-                'onStateChange': youtubeStateChange
-            }
-        });
+    player = new YT.Player('player', {
+        height: '390',
+        width: '640',
+        videoId: initialVideoId,
+        playerVars: {
+            'playsinline': 1,
+            'autoplay': 1
+        },
+        events: {
+            'onStateChange': youtubeStateChange
+        }
     });
 }
 

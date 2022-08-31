@@ -59,14 +59,16 @@ public partial class Player : ComponentBase {
         await Hub();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender) {
-        switch (Video?.VideoType) {
-            case VideoType.YouTube:
-                await _jsRuntime.InvokeVoidAsync("runYoutubeApi");
-                break;
-            case VideoType.FileUpload:
-                await _jsRuntime.InvokeVoidAsync("loadVideoFunctions");
-                break;
+    protected override async Task OnParametersSetAsync() {
+        if (Video != null) {
+            switch (Video?.VideoType) {
+                case VideoType.YouTube:
+                    await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo());
+                    break;
+                case VideoType.FileUpload:
+                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions");
+                    break;
+            }
         }
     }
 
