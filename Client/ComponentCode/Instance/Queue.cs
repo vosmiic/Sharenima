@@ -118,7 +118,6 @@ public partial class Queue : ComponentBase {
                 CurrentQueue.Remove(CurrentQueue.First());
                 await CurrentQueueChanged.InvokeAsync(CurrentQueue);
                 StateHasChanged();
-                QueuePlayerService.CallChangeVideo();
             }
         });
     }
