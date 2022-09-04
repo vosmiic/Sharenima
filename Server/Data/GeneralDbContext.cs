@@ -8,6 +8,7 @@ public class GeneralDbContext : DbContext {
     public DbSet<Instance> Instances { get; set; }
     public DbSet<Queue> Queues { get; set; }
     public DbSet<Settings> Settings { get; set; }
+    public DbSet<AdvancedRole> Roles { get; set; }
 
     public GeneralDbContext(
         DbContextOptions<GeneralDbContext> options) : base(options) {
