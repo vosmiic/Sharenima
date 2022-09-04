@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Sharenima.Server.Data;
+using Sharenima.Server.Handlers;
 using Sharenima.Server.Models;
 using Sharenima.Server.SignalR;
 
@@ -28,6 +30,13 @@ builder.Services.AddAuthentication()
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
+
+builder.Services.AddAuthorization(options => {
+    options.AddPolicy("Admin", policy =>
+        policy.Requirements.Add(new AdministratorRequirement(true)));
+});
+
+builder.Services.AddTransient<IAuthorizationHandler, AdministratorHandler>();
 
 builder.Services.AddResponseCompression(opts =>
 {
