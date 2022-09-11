@@ -1,21 +1,38 @@
 @page "/g/{InstanceId}"
 @inherits Sharenima.Client.ComponentCode.Instance
+@using Sharenima.Client.Pages.Instance.SettingsPages
 
 @if (SelectedInstance == null) {
     <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
 } else {
-    <MatH3>Instance @SelectedInstance.Name</MatH3>
+    <MatAppBarContainer>
+        <MatAppBar Fixed="true">
+            <MatAppBarRow>
+                <MatAppBarSection>
+                    <MatIconButton OnClick="@SettingsButtonClicked" Icon="settings"></MatIconButton>
+                    <MatAppBarTitle>Instance @SelectedInstance.Name</MatAppBarTitle>
+                </MatAppBarSection>
+            </MatAppBarRow>
+        </MatAppBar>
     
-    <div class="mat-layout-grid">
-        <div class="mat-layout-grid-inner">
-            <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8" style="background-color: red">
-                @if (CurrentQueue?.FirstOrDefault() != null) {
-                    <Player InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime" Video="@CurrentQueue?.FirstOrDefault()"></Player>
-                }
-            </div>
-            <div class="mat-layout-grid-cell mat-layout-grid-cell-span-4" style="background-color: blue">
-                <Queue InstanceId="@SelectedInstance.Id" @bind-CurrentQueue="@CurrentQueue" HubConnection="@_hubConnection"></Queue>
+        <div class="mat-layout-grid">
+            <div class="mat-layout-grid-inner">
+                <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8" style="background-color: red">
+                    @if (CurrentQueue?.FirstOrDefault() != null) {
+                        <Player InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime" Video="@CurrentQueue?.FirstOrDefault()"></Player>
+                    }
+                </div>
+                <div class="mat-layout-grid-cell mat-layout-grid-cell-span-4" style="background-color: blue">
+                    <Queue InstanceId="@SelectedInstance.Id" @bind-CurrentQueue="@CurrentQueue" HubConnection="@_hubConnection"></Queue>
+                </div>
             </div>
         </div>
-    </div>
+    </MatAppBarContainer>
 }
+
+<MatDialog @bind-IsOpen="@settingsIsOpen">
+    <MatDialogTitle>Instance Settings</MatDialogTitle>
+    <MatDialogContent>
+        <SettingsIndex InstanceName="@InstanceId" />
+    </MatDialogContent>
+</MatDialog>
