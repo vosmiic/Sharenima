@@ -12,8 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseSqlite(connectionString), ServiceLifetime.Scoped);
 builder.Services.AddDbContextFactory<GeneralDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("General")));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -34,12 +34,13 @@ builder.Services.AddSignalR();
 builder.Services.AddAuthorization(options => {
     options.AddPolicy("Admin", policy =>
         policy.Requirements.Add(new AdministratorRequirement(true)));
+    options.AddPolicy("ChangeProgress", policy =>
+        policy.Requirements.Add(new ChangeProgressRequirement(true)));
 });
 
 builder.Services.AddTransient<IAuthorizationHandler, AdministratorHandler>();
 
-builder.Services.AddResponseCompression(opts =>
-{
+builder.Services.AddResponseCompression(opts => {
     opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
         new[] { "application/octet-stream" });
 });
@@ -47,13 +48,10 @@ builder.Services.AddResponseCompression(opts =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
+if (app.Environment.IsDevelopment()) {
     app.UseMigrationsEndPoint();
     app.UseWebAssemblyDebugging();
-}
-else
-{
+} else {
     app.UseExceptionHandler("/Error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
