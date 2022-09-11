@@ -16,6 +16,8 @@ public partial class Instance : ComponentBase {
 
     protected ICollection<Sharenima.Shared.Queue>? CurrentQueue { get; set; }
 
+    protected bool settingsIsOpen = false;
+
 
     protected override async Task OnInitializedAsync() {
         HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"Instance?instanceName={InstanceId}");
@@ -38,4 +40,7 @@ public partial class Instance : ComponentBase {
         
         isLoaded = true;
     }
+
+    protected void SettingsButtonClicked() =>
+        settingsIsOpen = true;
 }

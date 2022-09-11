@@ -1,0 +1,12 @@
+@inherits Sharenima.Client.ComponentCode.SettingsIndex
+<div>
+    <MatNavMenu Style="width: 15%">
+        <MatNavItem>General</MatNavItem>
+        <MatNavItem OnClick="() => ChangeSettingsPage(nameof(Permissions))">Permissions</MatNavItem>
+    </MatNavMenu>
+    <div style="width: 85%">
+        @if (Page != null) {
+            <DynamicComponent Type="Page" Parameters="@Parameters"/>
+        }
+    </div>
+</div>
