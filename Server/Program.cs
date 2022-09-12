@@ -36,6 +36,10 @@ builder.Services.AddAuthorization(options => {
         policy.Requirements.Add(new AdministratorRequirement(true)));
     options.AddPolicy("ChangeProgress", policy =>
         policy.Requirements.Add(new ChangeProgressRequirement(true)));
+    options.AddPolicy("UploadVideo", policy =>
+        policy.Requirements.Add(new UploadVideoRequirement(true)));
+    options.AddPolicy("AddVideo", policy =>
+        policy.Requirements.Add(new AddVideoRequirement(true)));
 });
 
 builder.Services.AddTransient<IAuthorizationHandler, AdministratorHandler>();
