@@ -20,18 +20,21 @@ public class SettingsController : ControllerBase {
 
     [HttpGet]
     [Route("userPermissions")]
-    public async Task<List<LimitedUser>> ListUserPermissions() {
+    public async Task<ActionResult> ListUserPermissions(string instanceName) {
+        await using var generalContext = await _generalDbCotextFactory.CreateDbContextAsync();
+        Instance? instance = await generalContext.Instances.FirstOrDefaultAsync(instance => instance.Name == instanceName);
+        if (instance == null) return BadRequest("Instance could not be found");
         await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
         List<ApplicationUser> users = context.Users.Include(au => au.Roles).ToList();
         List<LimitedUser> limitedUsers = new List<LimitedUser>();
         foreach (ApplicationUser applicationUser in users) {
             limitedUsers.Add(new LimitedUser {
                 Username = applicationUser.UserName,
-                Permissions = applicationUser.Roles.Select(item => item.Permission).ToList()
+                Permissions = applicationUser.Roles.Where(role => role.InstanceId == instance.Id).Select(item => item.Permission).ToList()
             });
         }
 
-        return limitedUsers;
+        return Ok(limitedUsers);
     }
 
     [HttpPost]
