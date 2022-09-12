@@ -30,7 +30,7 @@ public class QueueController : ControllerBase {
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "AddVideo")]
     public async Task<ActionResult> AddVideoToInstance(Guid instanceId, string videoUrl) {
         YoutubeVideo? youtubeVideoInfo = await OnlineVideoHelpers.GetYoutubeVideoInfo(_httpClient, videoUrl);
         if (youtubeVideoInfo == null) return BadRequest("Provided video URL is incorrect");
@@ -59,7 +59,7 @@ public class QueueController : ControllerBase {
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "UploadVide")]
     [Route("fileUpload")]
     public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, [FromBody] File fileData) {
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -111,6 +111,7 @@ public class QueueController : ControllerBase {
     }
 
     [HttpDelete]
+    [Authorize(Policy = "Admin")]
     public async Task<ActionResult> DeleteVideoFromQueue(Guid instanceId, Guid queueId) {
         await using var context = await _contextFactory.CreateDbContextAsync();
         Queue? queue = await context.Queues.FirstOrDefaultAsync(queue => queue.Id == queueId);

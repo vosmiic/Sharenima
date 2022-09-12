@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
@@ -16,6 +17,7 @@ public class QueueHub : Hub {
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
     }
 
+    [Authorize(Policy = "ChangeProgress")]
     public async Task SendStateChange(string groupName, int state, Guid queueId) {
         if (state == 0) {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -32,6 +34,7 @@ public class QueueHub : Hub {
         await Clients.Group(groupName).SendAsync("ReceiveStateChange", state);
     }
 
+    [Authorize(Policy = "ChangeProgress")]
     public async Task SendProgressChange(string groupName, TimeSpan videoTime) {
         await using var context = await _contextFactory.CreateDbContextAsync();
         Guid parsedGroupName;

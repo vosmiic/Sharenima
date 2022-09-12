@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
@@ -20,6 +21,7 @@ public class SettingsController : ControllerBase {
 
     [HttpGet]
     [Route("userPermissions")]
+    [Authorize(Policy = "Admin")]
     public async Task<ActionResult> ListUserPermissions(string instanceName) {
         await using var generalContext = await _generalDbCotextFactory.CreateDbContextAsync();
         Instance? instance = await generalContext.Instances.FirstOrDefaultAsync(instance => instance.Name == instanceName);
@@ -39,6 +41,7 @@ public class SettingsController : ControllerBase {
 
     [HttpPost]
     [Route("userPermissions")]
+    [Authorize(Policy = "Admin")]
     public async Task<ActionResult> SaveUserPermissions(string user, string instanceName, [FromBody] List<PermissionOptions> userPermissionList) {
         await using var generalContext = await _generalDbCotextFactory.CreateDbContextAsync();
         Instance? instance = await generalContext.Instances.FirstOrDefaultAsync(instance => instance.Name == instanceName);
