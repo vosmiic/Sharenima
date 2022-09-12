@@ -10,6 +10,8 @@ public class Permissions {
         ChangeProgress,
         [Display(Name = "Skip video")]
         SkipVideo,
+        [Display(Name = "Add videos")]
+        AddVideo,
         [Display(Name = "Upload videos")]
         UploadVideo
     }
