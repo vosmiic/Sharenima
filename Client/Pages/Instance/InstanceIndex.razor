@@ -28,11 +28,11 @@
             </div>
         </div>
     </MatAppBarContainer>
+    
+    <MatDialog @bind-IsOpen="@settingsIsOpen">
+        <MatDialogTitle>Instance Settings</MatDialogTitle>
+        <MatDialogContent>
+            <SettingsIndex InstanceId="@SelectedInstance.Id" />
+        </MatDialogContent>
+    </MatDialog>
 }
-
-<MatDialog @bind-IsOpen="@settingsIsOpen">
-    <MatDialogTitle>Instance Settings</MatDialogTitle>
-    <MatDialogContent>
-        <SettingsIndex InstanceName="@InstanceId" />
-    </MatDialogContent>
-</MatDialog>

@@ -9,7 +9,7 @@ using Sharenima.Shared.Helpers;
 namespace Sharenima.Client.ComponentCode.Settings;
 
 public partial class Permissions : ComponentBase {
-    [Parameter] public string InstanceId { get; set; }
+    [Parameter] public Guid InstanceId { get; set; }
     [Inject] private HttpClient _httpClient { get; set; }
     [Inject] protected IMatToaster _toaster { get; set; }
 
@@ -18,7 +18,7 @@ public partial class Permissions : ComponentBase {
     protected List<PermissionOptions> PermissionOptions = new();
 
     protected override async Task OnInitializedAsync() {
-        HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"settings/userPermissions?instanceName={InstanceId}");
+        HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"settings/userPermissions?instanceId={InstanceId}");
 
         if (httpResponseMessage.IsSuccessStatusCode) {
             Users = await httpResponseMessage.Content.ReadFromJsonAsync<List<LimitedUser>>();
@@ -45,7 +45,7 @@ public partial class Permissions : ComponentBase {
     }
 
     protected async void SavePermissions() {
-        HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync($"settings/userPermissions?instanceName={InstanceId}&user={SelectedUser.Username}", JsonConverters.ConvertObjectToHttpContent(PermissionOptions));
+        HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync($"settings/userPermissions?instanceId={InstanceId}&user={SelectedUser?.Username ?? "instance"}", JsonConverters.ConvertObjectToHttpContent(PermissionOptions));
 
         if (httpResponseMessage.IsSuccessStatusCode) {
             _toaster.Add("Permissions saved", MatToastType.Success);
