@@ -15,13 +15,15 @@ public class AdministratorRequirement : IAuthorizationRequirement {
 
 public class AdministratorHandler : AuthorizationHandler<AdministratorRequirement> {
     private readonly ApplicationDbContext _context;
+    private readonly GeneralDbContext _generalDbContext;
 
-    public AdministratorHandler(ApplicationDbContext context) {
+    public AdministratorHandler(ApplicationDbContext context, GeneralDbContext generalDbContext) {
         _context = context;
+        _generalDbContext = generalDbContext;
     }
 
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, AdministratorRequirement requirement) =>
-        BaseHandler.BaseAuthorizationHandler(context, requirement, _context);
+        BaseHandler.BaseAuthorizationHandler(context, requirement, _context, _generalDbContext);
 }
 
 internal class AdministratorAuthorizeAttribute : AuthorizeAttribute {

@@ -16,13 +16,15 @@ public class ChangeProgressRequirement : IAuthorizationRequirement {
 
 public class ChangeProgressHandler : AuthorizationHandler<AdministratorRequirement> {
     private readonly ApplicationDbContext _context;
+    private readonly GeneralDbContext _generalDbContext;
 
-    public ChangeProgressHandler(ApplicationDbContext context) {
+    public ChangeProgressHandler(ApplicationDbContext context, GeneralDbContext generalDbContext) {
         _context = context;
+        _generalDbContext = generalDbContext;
     }
 
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, AdministratorRequirement requirement) => 
-        BaseHandler.BaseAuthorizationHandler(context, requirement, _context, Permissions.Permission.ChangeProgress);
+        BaseHandler.BaseAuthorizationHandler(context, requirement, _context, _generalDbContext, Permissions.Permission.ChangeProgress);
 }
 
 internal class ChangeProgressAuthorizeAttribute : AuthorizeAttribute {
