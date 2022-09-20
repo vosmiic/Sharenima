@@ -1,26 +1,26 @@
 @inherits Sharenima.Client.ComponentCode.Settings.Permissions
 
 <h3>Permissions</h3>
-@if (Users != null) {
-    <MatAutocompleteList Items="Users.Select(item => item.Username)" TItem="string" Label="User" ValueChanged="ChangeSelectedUser"></MatAutocompleteList>
-    if (SelectedUser != null && PermissionOptions.Count > 0) {
-        <table>
+@if (Ready) {
+    <MatAutocompleteList Items="InstancePermissions.UserPermissions.Select(item => item.Username)" TItem="string" Label="User" ShowClearButton="true" ValueChanged="ChangeSelectedUser"></MatAutocompleteList>
+    <table>
+        <tr>
+            <th>Permission</th>
+            <th>Allowed?</th>
+        </tr>
+        @{ var index = 0; }
+        @foreach (var permission in PermissionOptions) {
+            int loopIndex = index;
             <tr>
-                <th>Permission</th>
-                <th>Allowed?</th>
+                <td>@permission.PermissionDisplayName</td>
+                <td>
+                    <input type="checkbox" id="perm-@permission.PermissionEnum" @bind="@PermissionOptions[loopIndex].Ticked"/>
+                </td>
             </tr>
-            @{ var index = 0;}
-            @foreach (var permission in PermissionOptions) {
-                int loopIndex = index;
-                <tr>
-                    <td>@permission.PermissionDisplayName</td>
-                    <td><input type="checkbox" id="perm-@permission.PermissionEnum" @bind="@PermissionOptions[loopIndex].Ticked" /></td>
-                </tr>
-                index++;
-            }
-        </table>
-        <MatButton Raised="true" Icon="save" OnClick="SavePermissions">Save</MatButton>
-    }
+            index++;
+        }
+    </table>
+    <MatButton Raised="true" Icon="save" OnClick="SavePermissions">Save</MatButton>
 } else {
-    <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
+    <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
 }

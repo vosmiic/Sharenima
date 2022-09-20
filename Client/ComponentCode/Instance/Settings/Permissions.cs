@@ -13,30 +13,42 @@ public partial class Permissions : ComponentBase {
     [Inject] private HttpClient _httpClient { get; set; }
     [Inject] protected IMatToaster _toaster { get; set; }
 
-    protected List<LimitedUser>? Users { get; set; }
-    protected LimitedUser? SelectedUser { get; set; }
+    protected InstancePermissions? InstancePermissions { get; set; }
+    private UserPermissions? SelectedUser { get; set; }
     protected List<PermissionOptions> PermissionOptions = new();
+    protected bool Ready;
 
     protected override async Task OnInitializedAsync() {
-        HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"settings/userPermissions?instanceId={InstanceId}");
+        HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"settings/instancePermissions?instanceId={InstanceId}");
 
         if (httpResponseMessage.IsSuccessStatusCode) {
-            Users = await httpResponseMessage.Content.ReadFromJsonAsync<List<LimitedUser>>();
+            InstancePermissions = await httpResponseMessage.Content.ReadFromJsonAsync<InstancePermissions>();
+            
+            PermissionOptions = Enum.GetValues(typeof(Sharenima.Shared.Permissions.Permission))
+                .Cast<Sharenima.Shared.Permissions.Permission>()
+                .Select(permission => new PermissionOptions {
+                    PermissionEnum = (int)permission,
+                    PermissionDisplayName = permission.GetType().GetMember(permission.ToString()).First().GetCustomAttribute<DisplayAttribute>()?.Name,
+                    Ticked = InstancePermissions.Permissions?.Any(item => item == permission) ?? false
+                })
+                .ToList();
+
+            Ready = true;
         }
 
-        PermissionOptions = Enum.GetValues(typeof(Sharenima.Shared.Permissions.Permission))
-            .Cast<Sharenima.Shared.Permissions.Permission>()
-            .Select(permission => new PermissionOptions {
-                PermissionEnum = (int)permission,
-                PermissionDisplayName = permission.GetType().GetMember(permission.ToString()).First().GetCustomAttribute<DisplayAttribute>()?.Name,
-                Ticked = false
-            })
-            .ToList();
+
     }
 
     protected void ChangeSelectedUser(string selectedUsername) {
-        if (Users != null) {
-            SelectedUser = Users.FirstOrDefault(user => user.Username == selectedUsername);
+        if (string.IsNullOrEmpty(selectedUsername)) {
+            SelectedUser = null;
+            
+            foreach (PermissionOptions permissionOptions in PermissionOptions) {
+                permissionOptions.Ticked = InstancePermissions is { Permissions: { } } && InstancePermissions.Permissions.Contains((Sharenima.Shared.Permissions.Permission)permissionOptions.PermissionEnum);
+            }
+        }
+        if (InstancePermissions?.UserPermissions != null) {
+            SelectedUser = InstancePermissions.UserPermissions.FirstOrDefault(user => user.Username == selectedUsername);
 
             foreach (PermissionOptions permissionOptions in PermissionOptions) {
                 permissionOptions.Ticked = SelectedUser.Permissions.Contains((Sharenima.Shared.Permissions.Permission)permissionOptions.PermissionEnum);
