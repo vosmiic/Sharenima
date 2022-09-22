@@ -31,7 +31,8 @@ public class SettingsController : ControllerBase {
         InstancePermissions instancePermissions = new InstancePermissions();
         instancePermissions.UserPermissions = new List<UserPermissions>();
         if (instance.Permissions.Any()) {
-            instancePermissions.Permissions = instance.Permissions.Select(instance => instance.Permissions).ToList();
+            instancePermissions.LoggedInUsersPermissions = instance.Permissions.Where(instance => !instance.AnonymousUser).Select(instance => instance.Permissions).ToList();
+            instancePermissions.AnonymousUsersPermissions = instance.Permissions.Where(instance => instance.AnonymousUser).Select(instance => instance.Permissions).ToList();
         }
         foreach (ApplicationUser applicationUser in users) {
             instancePermissions.UserPermissions.Add(new UserPermissions {
@@ -44,9 +45,9 @@ public class SettingsController : ControllerBase {
     }
 
     [HttpPost]
-    [Route("userPermissions")]
+    [Route("instancePermissions")]
     [Authorize(Policy = "Admin")]
-    public async Task<ActionResult> SaveUserPermissions(string user, Guid instanceId, [FromBody] List<PermissionOptions> userPermissionList) {
+    public async Task<ActionResult> SaveInstancePermissions(string user, Guid instanceId, bool anonymousUser, [FromBody] List<PermissionOptions> userPermissionList) {
         await using var generalContext = await _generalDbCotextFactory.CreateDbContextAsync();
         Instance? instance = await generalContext.Instances.Where(instance => instance.Id == instanceId).Include(instance => instance.Permissions).FirstOrDefaultAsync();
         if (instance == null) return BadRequest("Instance could not be found");
@@ -55,12 +56,13 @@ public class SettingsController : ControllerBase {
             foreach (PermissionOptions permissionOptions in userPermissionList) {
                 Permissions.Permission permission = (Permissions.Permission)permissionOptions.PermissionEnum;
 
-                if (permissionOptions.Ticked && instance.Permissions.Count(perm => perm.Permissions == permission) == 0) {
+                if (permissionOptions.Ticked && instance.Permissions.Count(perm => perm.Permissions == permission && perm.AnonymousUser == anonymousUser) == 0) {
                     instance.Permissions.Add(new InstancePermission {
-                        Permissions = permission
+                        Permissions = permission,
+                        AnonymousUser = anonymousUser
                     });
-                } else if (!permissionOptions.Ticked && instance.Permissions.Count(perm => perm.Permissions == permission) > 0) {
-                    InstancePermission? instancePermission = instance.Permissions.FirstOrDefault(perm => perm.Permissions == permission);
+                } else if (!permissionOptions.Ticked && instance.Permissions.Count(perm => perm.Permissions == permission && perm.AnonymousUser == anonymousUser) > 0) {
+                    InstancePermission? instancePermission = instance.Permissions.FirstOrDefault(perm => perm.Permissions == permission && perm.AnonymousUser == anonymousUser);
                     if (instancePermission != null) {
                         instance.Permissions.Remove(instancePermission);
                     }

@@ -14,9 +14,10 @@ public partial class Permissions : ComponentBase {
     [Inject] protected IMatToaster _toaster { get; set; }
 
     protected InstancePermissions? InstancePermissions { get; set; }
-    private UserPermissions? SelectedUser { get; set; }
+    protected UserPermissions? SelectedUser { get; set; }
     protected List<PermissionOptions> PermissionOptions = new();
-    protected bool Ready;
+    private bool AnonymousUser { get; set; }
+    protected bool Ready { get; set; }
 
     protected override async Task OnInitializedAsync() {
         HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"settings/instancePermissions?instanceId={InstanceId}");
@@ -29,7 +30,7 @@ public partial class Permissions : ComponentBase {
                 .Select(permission => new PermissionOptions {
                     PermissionEnum = (int)permission,
                     PermissionDisplayName = permission.GetType().GetMember(permission.ToString()).First().GetCustomAttribute<DisplayAttribute>()?.Name,
-                    Ticked = InstancePermissions.Permissions?.Any(item => item == permission) ?? false
+                    Ticked = InstancePermissions.LoggedInUsersPermissions?.Any(item => item == permission) ?? false
                 })
                 .ToList();
 
@@ -42,9 +43,15 @@ public partial class Permissions : ComponentBase {
     protected void ChangeSelectedUser(string selectedUsername) {
         if (string.IsNullOrEmpty(selectedUsername)) {
             SelectedUser = null;
-            
-            foreach (PermissionOptions permissionOptions in PermissionOptions) {
-                permissionOptions.Ticked = InstancePermissions is { Permissions: { } } && InstancePermissions.Permissions.Contains((Sharenima.Shared.Permissions.Permission)permissionOptions.PermissionEnum);
+
+            if (AnonymousUser) {
+                foreach (PermissionOptions permissionOptions in PermissionOptions) {
+                    permissionOptions.Ticked = InstancePermissions is { AnonymousUsersPermissions: { } } && InstancePermissions.AnonymousUsersPermissions.Contains((Sharenima.Shared.Permissions.Permission)permissionOptions.PermissionEnum);
+                }
+            } else {
+                foreach (PermissionOptions permissionOptions in PermissionOptions) {
+                    permissionOptions.Ticked = InstancePermissions is { LoggedInUsersPermissions: { } } && InstancePermissions.LoggedInUsersPermissions.Contains((Sharenima.Shared.Permissions.Permission)permissionOptions.PermissionEnum);
+                }
             }
         }
         if (InstancePermissions?.UserPermissions != null) {
@@ -57,7 +64,7 @@ public partial class Permissions : ComponentBase {
     }
 
     protected async void SavePermissions() {
-        HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync($"settings/userPermissions?instanceId={InstanceId}&user={SelectedUser?.Username ?? "instance"}", JsonConverters.ConvertObjectToHttpContent(PermissionOptions));
+        HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync($"settings/instancePermissions?instanceId={InstanceId}&user={SelectedUser?.Username ?? "instance"}&anonymousUser={AnonymousUser}", JsonConverters.ConvertObjectToHttpContent(PermissionOptions));
 
         if (httpResponseMessage.IsSuccessStatusCode) {
             _toaster.Add("Permissions saved", MatToastType.Success);
@@ -65,5 +72,19 @@ public partial class Permissions : ComponentBase {
             _toaster.Add("Could not save permissions", MatToastType.Danger);
         }
 
+    }
+
+    protected void AnonymousLoggedInUserPermissionSwitch(bool toggle) {
+        if (toggle) {
+            foreach (PermissionOptions permissionOptions in PermissionOptions) {
+                permissionOptions.Ticked = InstancePermissions is { AnonymousUsersPermissions: { } } && InstancePermissions.AnonymousUsersPermissions.Contains((Sharenima.Shared.Permissions.Permission)permissionOptions.PermissionEnum);
+            }
+        } else {
+            foreach (PermissionOptions permissionOptions in PermissionOptions) {
+                permissionOptions.Ticked = InstancePermissions is { LoggedInUsersPermissions: { } } && InstancePermissions.LoggedInUsersPermissions.Contains((Sharenima.Shared.Permissions.Permission)permissionOptions.PermissionEnum);
+            }
+        }
+
+        AnonymousUser = toggle;
     }
 }

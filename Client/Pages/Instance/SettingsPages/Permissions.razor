@@ -3,6 +3,10 @@
 <h3>Permissions</h3>
 @if (Ready) {
     <MatAutocompleteList Items="InstancePermissions.UserPermissions.Select(item => item.Username)" TItem="string" Label="User" ShowClearButton="true" ValueChanged="ChangeSelectedUser"></MatAutocompleteList>
+    @if (SelectedUser == null) {
+        <MatSlideToggle TValue="bool" ValueChanged="@(AnonymousLoggedInUserPermissionSwitch)"></MatSlideToggle>
+        <p>Anonymous User Permissions</p>
+    }
     <table>
         <tr>
             <th>Permission</th>
