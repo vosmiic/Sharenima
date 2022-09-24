@@ -28,7 +28,7 @@ public class ChangeProgressHandler : AuthorizationHandler<AdministratorRequireme
 }
 
 internal class ChangeProgressAuthorizeAttribute : AuthorizeAttribute {
-    const string POLICY_PREFIX = "Admin";
+    const string POLICY_PREFIX = "ChangeProgress";
 
     public ChangeProgressAuthorizeAttribute(Guid instanceId) => InstanceId = instanceId;
 
