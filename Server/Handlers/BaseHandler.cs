@@ -40,10 +40,9 @@ public class BaseHandler {
                  )))
             ) ||
             instance.Permissions.Any(perm =>
-                !perm.AnonymousUser &&
-                (perm.Permissions == Permissions.Permission.Administrator ||
+                perm.Permissions == Permissions.Permission.Administrator ||
                  (additionalPermission != null &&
-                  perm.Permissions == additionalPermission)))) {
+                  perm.Permissions == additionalPermission))) {
             context.Succeed(requirement);
         } else {
             context.Fail();
