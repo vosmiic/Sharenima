@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
 using Sharenima.Server.Models;
@@ -13,10 +14,21 @@ public class BaseHandler {
         ApplicationUser? user = applicationDbContext.Users.Where(user => user.Id == currentUserId).Include(au => au.Roles).FirstOrDefault();
         Guid? instanceId = null;
 
-        if (context.Resource is HttpContext httpContext) {
-            var queryCollection = httpContext.Request.Query;
-            if (queryCollection.ContainsKey("instanceId")) {
-                instanceId = Guid.Parse(queryCollection["instanceId"]);
+        switch (context.Resource) {
+            case HttpContext httpContext: {
+                var queryCollection = httpContext.Request.Query;
+                if (queryCollection.ContainsKey("instanceId")) {
+                    instanceId = Guid.Parse(queryCollection["instanceId"]);
+                }
+
+                break;
+            }
+            case HubInvocationContext hubInvocationContext: {
+                if (Guid.TryParse(hubInvocationContext.HubMethodArguments[0]?.ToString(), out Guid parsedInstanceId)) {
+                    instanceId = parsedInstanceId;
+                }
+
+                break;
             }
         }
 
