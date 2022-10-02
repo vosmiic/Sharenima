@@ -9,7 +9,7 @@ using Sharenima.Shared;
 namespace Sharenima.Server.Handlers;
 
 public class BaseHandler {
-    public static Task BaseAuthorizationHandler(AuthorizationHandlerContext context, AdministratorRequirement requirement, ApplicationDbContext applicationDbContext, GeneralDbContext generalDbContext, Permissions.Permission? additionalPermission = null) {
+    public static Task BaseAuthorizationHandler(AuthorizationHandlerContext context, IAuthorizationRequirement requirement, ApplicationDbContext applicationDbContext, GeneralDbContext generalDbContext, Permissions.Permission? additionalPermission = null) {
         string currentUserId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
         ApplicationUser? user = applicationDbContext.Users.Where(user => user.Id == currentUserId).Include(au => au.Roles).FirstOrDefault();
         Guid? instanceId = null;
@@ -32,7 +32,7 @@ public class BaseHandler {
             }
         }
 
-        if (instanceId == null || user == null) {
+        if (instanceId == null) {
             context.Fail();
             return Task.CompletedTask;
         }
@@ -44,7 +44,7 @@ public class BaseHandler {
         }
 
         if (
-            (user.Roles.Count > 0 &&
+            (user != null && user.Roles.Count > 0 &&
              user.Roles.Any(item => item.InstanceId == instanceId.Value && (
                  (item.Permission == Permissions.Permission.Administrator ||
                   (additionalPermission != null &&

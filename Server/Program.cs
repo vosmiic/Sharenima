@@ -38,6 +38,12 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 
+builder.Services.AddScoped<IAuthorizationHandler, ChangeProgressHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, UploadVideoHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, AddVideoHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, AdministratorHandler>();
+
+
 builder.Services.AddAuthorization(options => {
     options.AddPolicy("Admin", policy =>
         policy.Requirements.Add(new AdministratorRequirement(true)));
@@ -48,8 +54,6 @@ builder.Services.AddAuthorization(options => {
     options.AddPolicy("AddVideo", policy =>
         policy.Requirements.Add(new AddVideoRequirement(true)));
 });
-
-builder.Services.AddTransient<IAuthorizationHandler, AdministratorHandler>();
 
 builder.Services.AddResponseCompression(opts => {
     opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(

@@ -1,8 +1,5 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
-using Sharenima.Server.Models;
 using Sharenima.Shared;
 
 namespace Sharenima.Server.Handlers;
@@ -14,7 +11,7 @@ public class ChangeProgressRequirement : IAuthorizationRequirement {
     public bool ChangeProgress { get; }
 }
 
-public class ChangeProgressHandler : AuthorizationHandler<AdministratorRequirement> {
+public class ChangeProgressHandler : AuthorizationHandler<ChangeProgressRequirement> {
     private readonly ApplicationDbContext _context;
     private readonly GeneralDbContext _generalDbContext;
 
@@ -23,7 +20,7 @@ public class ChangeProgressHandler : AuthorizationHandler<AdministratorRequireme
         _generalDbContext = generalDbContext;
     }
 
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, AdministratorRequirement requirement) => 
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, ChangeProgressRequirement requirement) => 
         BaseHandler.BaseAuthorizationHandler(context, requirement, _context, _generalDbContext, Permissions.Permission.ChangeProgress);
 }
 
