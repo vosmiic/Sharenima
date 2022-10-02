@@ -11,7 +11,7 @@ public class UploadVideoRequirement : IAuthorizationRequirement {
     public bool AddVideo { get; }
 }
 
-public class UploadVideoHandler : AuthorizationHandler<AdministratorRequirement> {
+public class UploadVideoHandler : AuthorizationHandler<UploadVideoRequirement> {
     private readonly ApplicationDbContext _context;
     private readonly GeneralDbContext _generalDbContext;
 
@@ -20,7 +20,7 @@ public class UploadVideoHandler : AuthorizationHandler<AdministratorRequirement>
         _generalDbContext = generalDbContext;
     }
 
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, AdministratorRequirement requirement) =>
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, UploadVideoRequirement requirement) =>
         BaseHandler.BaseAuthorizationHandler(context, requirement, _context, _generalDbContext, Permissions.Permission.UploadVideo);
 }
 
