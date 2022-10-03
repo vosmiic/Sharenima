@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using MatBlazor;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using Sharenima.Shared.Helpers;
 using File = Sharenima.Shared.File;
@@ -8,8 +9,10 @@ using File = Sharenima.Shared.File;
 namespace Sharenima.Client.ComponentCode; 
 
 public partial class Queue : ComponentBase {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
     [Inject]
-    private HttpClient _httpClient { get; set; }
+    private IHttpClientFactory HttpClientFactory { get; set; }
     [Inject]
     protected IMatToaster _toaster { get; set; }
     [Inject]
@@ -24,20 +27,26 @@ public partial class Queue : ComponentBase {
     public EventCallback<ICollection<Sharenima.Shared.Queue>?> CurrentQueueChanged { get; set; }
     [Parameter]
     public Player? PlayerSibling { get; set; }
-    
     public string VideoUrl { get; set; }
-
     [Parameter]
     public HubConnection? HubConnection { get; set; }
+    private HttpClient? _authHttpClient { get; set; }
+    private HttpClient _anonymousHttpClient { get; set; }
 
     protected override async Task OnInitializedAsync() {
+        var authState = await authenticationStateTask;
+        if (authState.User.Identity is { IsAuthenticated: true })
+            _authHttpClient = HttpClientFactory.CreateClient("auth");
+        _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
         await GetQueue();
         
         await Hub();
     }
 
     protected async void AddVideoToQueue() {
-        var addVideoResponse = await _httpClient.PostAsync($"queue?instanceId={InstanceId}&videoUrl={VideoUrl}", null);
+        if (_authHttpClient == null) return;
+        //todo handle above
+        var addVideoResponse = await _authHttpClient.PostAsync($"queue?instanceId={InstanceId}&videoUrl={VideoUrl}", null);
 
         if (!addVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not add video; {addVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
@@ -45,6 +54,8 @@ public partial class Queue : ComponentBase {
     }
 
     protected async void UploadVideoToQueue(IMatFileUploadEntry[] files) {
+        if (_authHttpClient == null) return;
+        //todo handle above
         foreach (IMatFileUploadEntry matFileUploadEntry in files) {
             if (!matFileUploadEntry.Type.StartsWith("video"))
                 _toaster.Add("File is not a recognised video type", MatToastType.Danger, "Upload Error");
@@ -56,7 +67,7 @@ public partial class Queue : ComponentBase {
                 fileName = matFileUploadEntry.Name,
                 MediaType = matFileUploadEntry.Type
             };
-            var uploadVideoResponse = await _httpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}", JsonConverters.ConvertObjectToHttpContent(file));
+            var uploadVideoResponse = await _authHttpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}", JsonConverters.ConvertObjectToHttpContent(file));
             
 
             if (!uploadVideoResponse.IsSuccessStatusCode) {
@@ -66,7 +77,9 @@ public partial class Queue : ComponentBase {
     }
 
     protected async void RemoveFromVideoQueue(Guid queueId) {
-        var removeVideoResponse = await _httpClient.DeleteAsync($"queue?instanceId={InstanceId}&queueId={queueId}");
+        if (_authHttpClient == null) return;
+        //todo handle above
+        var removeVideoResponse = await _authHttpClient.DeleteAsync($"queue?instanceId={InstanceId}&queueId={queueId}");
 
         if (!removeVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not remove video; {removeVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
@@ -74,7 +87,7 @@ public partial class Queue : ComponentBase {
     }
 
     private async Task GetQueue() {
-        var httpResponse = await _httpClient.GetAsync($"queue?instanceId={InstanceId}");
+        var httpResponse = await _anonymousHttpClient.GetAsync($"queue?instanceId={InstanceId}");
 
         if (!httpResponse.IsSuccessStatusCode) {
             _toaster.Add("Could not load video queue", MatToastType.Danger, "Error");

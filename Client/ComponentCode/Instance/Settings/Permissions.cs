@@ -3,14 +3,17 @@ using System.Net.Http.Json;
 using System.Reflection;
 using MatBlazor;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Sharenima.Shared;
 using Sharenima.Shared.Helpers;
 
 namespace Sharenima.Client.ComponentCode.Settings;
 
 public partial class Permissions : ComponentBase {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
-    [Inject] private HttpClient _httpClient { get; set; }
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; }
     [Inject] protected IMatToaster _toaster { get; set; }
 
     protected InstancePermissions? InstancePermissions { get; set; }
@@ -18,8 +21,14 @@ public partial class Permissions : ComponentBase {
     protected List<PermissionOptions> PermissionOptions = new();
     private bool AnonymousUser { get; set; }
     protected bool Ready { get; set; }
+    private HttpClient? _httpClient { get; set; }
 
     protected override async Task OnInitializedAsync() {
+        var authState = await authenticationStateTask;
+        if (authState.User.Identity is { IsAuthenticated: true })
+            _httpClient = HttpClientFactory.CreateClient("auth");
+        if (_httpClient == null) return;
+        //todo handle above
         HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"settings/instancePermissions?instanceId={InstanceId}");
 
         if (httpResponseMessage.IsSuccessStatusCode) {
@@ -64,6 +73,8 @@ public partial class Permissions : ComponentBase {
     }
 
     protected async void SavePermissions() {
+        if (_httpClient == null) return;
+        //todo handle above
         HttpResponseMessage httpResponseMessage = await _httpClient.PostAsync($"settings/instancePermissions?instanceId={InstanceId}&user={SelectedUser?.Username ?? "instance"}&anonymousUser={AnonymousUser}", JsonConverters.ConvertObjectToHttpContent(PermissionOptions));
 
         if (httpResponseMessage.IsSuccessStatusCode) {
