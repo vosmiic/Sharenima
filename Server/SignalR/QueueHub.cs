@@ -8,9 +8,32 @@ namespace Sharenima.Server.SignalR;
 
 public class QueueHub : Hub {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
+    private static readonly ConnectionMapping _connectionMapping = new();
 
     public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory) {
         _contextFactory = contextFactory;
+    }
+
+    public override Task OnConnectedAsync() {
+        string? userName = Context.User?.Identity?.Name;
+        var httpContext = Context.GetHttpContext();
+        if (httpContext == null) return Task.CompletedTask;
+        var instanceId = httpContext.Request.Query["instanceId"];
+        if (instanceId.Count == 0) return Task.CompletedTask;
+
+        _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, userName != null ? Guid.Parse(userName) : null);
+        return base.OnConnectedAsync();
+    }
+
+    public override Task OnDisconnectedAsync(Exception? exception) {
+        string? userName = Context.User?.Identity?.Name;
+        var httpContext = Context.GetHttpContext();
+        if (httpContext == null) return Task.CompletedTask;
+        var instanceId = httpContext.Request.Query["instanceId"];
+        if (instanceId.Count == 0) return Task.CompletedTask;
+
+        _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, userName != null ? Guid.Parse(userName) : null);
+        return base.OnDisconnectedAsync(exception);
     }
 
     public async Task JoinGroup(string groupName) {
@@ -24,7 +47,7 @@ public class QueueHub : Hub {
             Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
             if (queue != null) {
                 Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
-                context.Remove(queue);
+                //context.Remove(queue);
                 if (instance != null) {
                     instance.VideoTime = TimeSpan.Zero;
                 }
