@@ -8,7 +8,7 @@ public class ConnectionMapping {
         return _instanceConnections.TryGetValue(instanceId, out List<InstanceConnection> connections) ? connections.Count : 0;
     }
 
-    public void Add(Guid instanceId, string connectionId, Guid? userId = null) {
+    public void Add(Guid instanceId, string connectionId, Guid? userId = null, string? userName = null) {
         KeyValuePair<Guid, List<InstanceConnection>>? instanceConnections;
         lock (_instanceConnections) {
             instanceConnections = _instanceConnections.FirstOrDefault(ic => ic.Key == instanceId);
@@ -19,7 +19,8 @@ public class ConnectionMapping {
                 _instanceConnections.Add(instanceId, new List<InstanceConnection> {
                     new() {
                         ConnectionId = connectionId,
-                        UserId = userId
+                        UserId = userId,
+                        UserName = userName
                     }
                 });
             }
@@ -27,7 +28,8 @@ public class ConnectionMapping {
             lock (_instanceConnections) {
                 instanceConnections.Value.Value.Add(new InstanceConnection {
                     ConnectionId = connectionId,
-                    UserId = userId
+                    UserId = userId,
+                    UserName = userName
                 });
             }
         }
@@ -57,6 +59,7 @@ public class ConnectionMapping {
 
     public class InstanceConnection {
         public Guid? UserId { get; set; }
+        public string? UserName { get; set; }
         public string ConnectionId { get; set; }
     }
 }
