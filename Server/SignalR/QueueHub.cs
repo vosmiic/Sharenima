@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -8,31 +9,32 @@ namespace Sharenima.Server.SignalR;
 
 public class QueueHub : Hub {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
-    private static readonly ConnectionMapping _connectionMapping = new();
+    private readonly ConnectionMapping _connectionMapping;
 
-    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory) {
+    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping) {
         _contextFactory = contextFactory;
+        _connectionMapping = connectionMapping;
     }
 
     public override Task OnConnectedAsync() {
-        string? userName = Context.User?.Identity?.Name;
+        string? userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         var httpContext = Context.GetHttpContext();
         if (httpContext == null) return Task.CompletedTask;
         var instanceId = httpContext.Request.Query["instanceId"];
         if (instanceId.Count == 0) return Task.CompletedTask;
 
-        _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, userName != null ? Guid.Parse(userName) : null);
+        _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, userId != null ? Guid.Parse(userId) : null, userId);
         return base.OnConnectedAsync();
     }
 
     public override Task OnDisconnectedAsync(Exception? exception) {
-        string? userName = Context.User?.Identity?.Name;
+        string? userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         var httpContext = Context.GetHttpContext();
         if (httpContext == null) return Task.CompletedTask;
         var instanceId = httpContext.Request.Query["instanceId"];
         if (instanceId.Count == 0) return Task.CompletedTask;
 
-        _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, userName != null ? Guid.Parse(userName) : null);
+        _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, userId != null ? Guid.Parse(userId) : null);
         return base.OnDisconnectedAsync(exception);
     }
 
