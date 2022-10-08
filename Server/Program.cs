@@ -38,6 +38,8 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 
+builder.Services.AddSingleton<ConnectionMapping>();
+
 builder.Services.AddScoped<IAuthorizationHandler, ChangeProgressHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, UploadVideoHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, AddVideoHandler>();
