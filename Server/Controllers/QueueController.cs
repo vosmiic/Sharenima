@@ -59,7 +59,7 @@ public class QueueController : ControllerBase {
     }
 
     [HttpPost]
-    [Authorize(Policy = "UploadVide")]
+    [Authorize(Policy = "UploadVideo")]
     [Route("fileUpload")]
     public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, [FromBody] File fileData) {
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -89,9 +89,12 @@ public class QueueController : ControllerBase {
         string extension = fileData.fileName.Substring(lastIndexOfExtension, fileData.fileName.Length - lastIndexOfExtension);
 
         string videoDownloadLocation = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
+        FileHelper fileHelper = new FileHelper();
+        (FileHelper.SupportedContainer? container, FileHelper.SupportCodecType? codec) containerCodec = await fileHelper.GetVideoContainerCodec(videoDownloadLocation);
+
         queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
         await System.IO.File.WriteAllBytesAsync(videoDownloadLocation, bytes);
-        string? thumbnailFileName = await FileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
+        string? thumbnailFileName = await fileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
         queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
 
         context.Queues.Add(queue);
