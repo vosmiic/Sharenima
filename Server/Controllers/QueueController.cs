@@ -8,6 +8,7 @@ using Sharenima.Server.Helpers;
 using Sharenima.Server.Models;
 using Sharenima.Server.SignalR;
 using Sharenima.Shared;
+using Xabe.FFmpeg;
 using File = Sharenima.Shared.File;
 using Instance = Sharenima.Shared.Instance;
 using Queue = Sharenima.Shared.Queue;
@@ -88,12 +89,23 @@ public class QueueController : ControllerBase {
         int lastIndexOfExtension = fileData.fileName.LastIndexOf(".", StringComparison.CurrentCulture);
         string extension = fileData.fileName.Substring(lastIndexOfExtension, fileData.fileName.Length - lastIndexOfExtension);
 
-        string videoDownloadLocation = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
-        FileHelper fileHelper = new FileHelper();
-        (FileHelper.SupportedContainer? container, FileHelper.SupportCodecType? codec) containerCodec = await fileHelper.GetVideoContainerCodec(videoDownloadLocation);
-
-        queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
+        string videoDownloadLocation = Path.Combine(downloadDirectory.FullName, $"temp-{queue.Id.ToString()}{extension}");
         await System.IO.File.WriteAllBytesAsync(videoDownloadLocation, bytes);
+        
+        FileHelper fileHelper = new FileHelper();
+        (FileHelper.SupportedContainer? container, VideoCodec? codec) containerCodec = await fileHelper.GetVideoContainerCodec(videoDownloadLocation);
+        if (containerCodec.container == null ||
+            containerCodec.codec == null ||
+            (containerCodec.container != null && 
+             containerCodec.codec != null && 
+             !FileHelper.CheckSupportedFile(containerCodec.codec.Value, containerCodec.container.Value))) {
+            //todo need to check settings to know what format to convert to
+            await FfmpegHelper.ConvertVideo(VideoCodec.vp9, videoDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"));
+        } else {
+            // remove temp tag
+        }
+        
+        queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
         string? thumbnailFileName = await fileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
         queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
 
