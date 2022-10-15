@@ -102,6 +102,9 @@ public class QueueController : ControllerBase {
             //todo need to check settings to know what format to convert to
             await FfmpegHelper.ConvertVideo(VideoCodec.vp9, videoDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"));
         } else {
+            string newFileName = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
+            System.IO.File.Move(videoDownloadLocation, newFileName);
+            videoDownloadLocation = newFileName;
             // remove temp tag
         }
         
