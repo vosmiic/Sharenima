@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MatBlazor;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -62,7 +63,7 @@ public class QueueController : ControllerBase {
     [HttpPost]
     [Authorize(Policy = "UploadVideo")]
     [Route("fileUpload")]
-    public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, [FromBody] File fileData) {
+    public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, string connectionId, [FromBody] File fileData) {
         await using var context = await _contextFactory.CreateDbContextAsync();
         Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == instanceId);
         if (instance == null)
@@ -93,21 +94,42 @@ public class QueueController : ControllerBase {
         await System.IO.File.WriteAllBytesAsync(videoDownloadLocation, bytes);
         
         FileHelper fileHelper = new FileHelper();
-        (FileHelper.SupportedContainer? container, VideoCodec? codec) containerCodec = await fileHelper.GetVideoContainerCodec(videoDownloadLocation);
-        if (containerCodec.container == null ||
-            containerCodec.codec == null ||
-            (containerCodec.container != null && 
-             containerCodec.codec != null && 
-             !FileHelper.CheckSupportedFile(containerCodec.codec.Value, containerCodec.container.Value))) {
+        var mediaInfo = await FfmpegHelper.GetFileMetadata(videoDownloadLocation);
+        if (mediaInfo.VideoStreams.FirstOrDefault()?.Bitrate == null) return BadRequest("Invalid file type");
+        FileHelper.SupportedContainer? container = fileHelper.GetVideoContainer(videoDownloadLocation);
+        IVideoStream? firstVideoStream = mediaInfo.VideoStreams.FirstOrDefault();
+        if (container == null ||
+            (Enum.TryParse<VideoCodec>(firstVideoStream?.Codec, false, out VideoCodec videoCodec) &&
+            !FileHelper.CheckSupportedFile(videoCodec, container.Value))) {
             //todo need to check settings to know what format to convert to
-            await FfmpegHelper.ConvertVideo(VideoCodec.vp9, videoDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"));
-        } else {
-            string newFileName = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
-            System.IO.File.Move(videoDownloadLocation, newFileName);
-            videoDownloadLocation = newFileName;
-            // remove temp tag
+            ConvertVideo(videoDownloadLocation, downloadDirectory, queue, hostedLocation, fileHelper, instanceId, connectionId);
+
+            return Ok();
         }
+
+        string newFileName = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
+        System.IO.File.Move(videoDownloadLocation, newFileName);
+        videoDownloadLocation = newFileName;
+
+
+        await AddUploadedVideoToDb(queue, hostedLocation, extension, fileHelper, videoDownloadLocation, downloadDirectory, context, instanceId);
+
+        return Ok();
+    }
+
+    private async Task ConvertVideo(string videoDownloadLocation, DirectoryInfo downloadDirectory, Queue queue, string hostedLocation, FileHelper fileHelper, Guid instanceId, string connectionId) {
+        bool converted = await FfmpegHelper.ConvertVideo(VideoCodec.vp9, videoDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"));
         
+        if (converted) {
+            queue.MediaType = "video/webm";
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            await AddUploadedVideoToDb(queue, hostedLocation, ".webm", fileHelper, videoDownloadLocation, downloadDirectory, context, instanceId);
+        } else {
+            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Error Uploading Video", "Could not upload the video; could not be converted to appropriate web video format", MatToastType.Danger);
+        }
+    }
+
+    private async Task AddUploadedVideoToDb(Queue queue, string hostedLocation, string extension, FileHelper fileHelper, string videoDownloadLocation, DirectoryInfo downloadDirectory, GeneralDbContext context, Guid instanceId) {
         queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
         string? thumbnailFileName = await fileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
         queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
@@ -116,8 +138,6 @@ public class QueueController : ControllerBase {
         await context.SaveChangesAsync();
 
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
-
-        return Ok();
     }
 
     [HttpGet]

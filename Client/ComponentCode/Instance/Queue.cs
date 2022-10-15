@@ -57,8 +57,11 @@ public partial class Queue : ComponentBase {
         if (_authHttpClient == null) return;
         //todo handle above
         foreach (IMatFileUploadEntry matFileUploadEntry in files) {
-            if (!matFileUploadEntry.Type.StartsWith("video"))
+            if (!matFileUploadEntry.Type.StartsWith("video")) {
                 _toaster.Add("File is not a recognised video type", MatToastType.Danger, "Upload Error");
+                return;
+            }
+
             var stream = new MemoryStream();
             await matFileUploadEntry.WriteToStreamAsync(stream);
             string base64File = Convert.ToBase64String(stream.ToArray());
@@ -67,7 +70,7 @@ public partial class Queue : ComponentBase {
                 fileName = matFileUploadEntry.Name,
                 MediaType = matFileUploadEntry.Type
             };
-            var uploadVideoResponse = await _authHttpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}", JsonConverters.ConvertObjectToHttpContent(file));
+            var uploadVideoResponse = await _authHttpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}&connectionId={HubConnection?.ConnectionId}", JsonConverters.ConvertObjectToHttpContent(file));
             
 
             if (!uploadVideoResponse.IsSuccessStatusCode) {
@@ -133,5 +136,7 @@ public partial class Queue : ComponentBase {
                 StateHasChanged();
             }
         });
+        
+        
     }
 }

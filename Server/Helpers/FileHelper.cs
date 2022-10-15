@@ -21,19 +21,13 @@ public class FileHelper {
     /// </summary>
     /// <param name="videoFilePath">Path to the video.</param>
     /// <returns>Container and codec of the video.</returns>
-    public async Task<(SupportedContainer? container, VideoCodec? codec)> GetVideoContainerCodec(string videoFilePath) {
-        string? codec = await FfmpegHelper.FfmpegCommand(false, $"-v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 {videoFilePath}");
-        VideoCodec? convertedCodec = null;
-        if (!string.IsNullOrEmpty(codec) && Enum.TryParse(codec, out VideoCodec outCodec)) {
-            convertedCodec = outCodec;
-        }
-        
+    public SupportedContainer? GetVideoContainer(string videoFilePath) {
         int fileTypeIndex = videoFilePath.LastIndexOf(".", StringComparison.CurrentCulture);
         if (fileTypeIndex != -1 && Enum.TryParse<SupportedContainer>(videoFilePath.Substring(fileTypeIndex + 1), true, out SupportedContainer container)) {
-            return (container, convertedCodec);
+            return container;
         }
 
-        return (null, convertedCodec);
+        return null;
     }
 
     public static bool CheckSupportedFile(VideoCodec codec, SupportedContainer container) {

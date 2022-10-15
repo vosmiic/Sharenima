@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using MatBlazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -11,6 +12,7 @@ public partial class Instance : ComponentBase {
     [Inject] private IHttpClientFactory HttpClientFactory { get; set; }
     [Inject] private NavigationManager _navigationManager { get; set; }
     [Inject] IAccessTokenProvider TokenProvider { get; set; }
+    [Inject] protected IMatToaster _toaster { get; set; }
     [Parameter] public string InstanceId { get; set; }
     protected HubConnection? _hubConnection;
     protected Sharenima.Shared.Instance? SelectedInstance { get; set; }
@@ -47,6 +49,10 @@ public partial class Instance : ComponentBase {
             .Build();
         
         await _hubConnection.StartAsync();
+
+        _hubConnection.On<string?, string?, MatToastType>("ToasterError", (title, message, toastType) => {
+            _toaster.Add(message, toastType, title);
+        });
 
         isLoaded = true;
     }
