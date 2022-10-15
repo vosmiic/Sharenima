@@ -29,7 +29,7 @@ public class FileHelper {
         }
         
         int fileTypeIndex = videoFilePath.LastIndexOf(".", StringComparison.CurrentCulture);
-        if (fileTypeIndex != -1 && Enum.TryParse(videoFilePath.Substring(fileTypeIndex), out SupportedContainer container)) {
+        if (fileTypeIndex != -1 && Enum.TryParse<SupportedContainer>(videoFilePath.Substring(fileTypeIndex + 1), true, out SupportedContainer container)) {
             return (container, convertedCodec);
         }
 
