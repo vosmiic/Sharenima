@@ -1,3 +1,4 @@
+using Xabe.FFmpeg;
 using Xabe.FFmpeg.Downloader;
 
 namespace Sharenima.Server.Helpers; 
@@ -20,10 +21,10 @@ public class FileHelper {
     /// </summary>
     /// <param name="videoFilePath">Path to the video.</param>
     /// <returns>Container and codec of the video.</returns>
-    public async Task<(SupportedContainer? container, SupportCodecType? codec)> GetVideoContainerCodec(string videoFilePath) {
+    public async Task<(SupportedContainer? container, VideoCodec? codec)> GetVideoContainerCodec(string videoFilePath) {
         string? codec = await FfmpegHelper.FfmpegCommand(false, $"-v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 {videoFilePath}");
-        SupportCodecType? convertedCodec = null;
-        if (!string.IsNullOrEmpty(codec) && Enum.TryParse(codec, out SupportCodecType outCodec)) {
+        VideoCodec? convertedCodec = null;
+        if (!string.IsNullOrEmpty(codec) && Enum.TryParse(codec, out VideoCodec outCodec)) {
             convertedCodec = outCodec;
         }
         
@@ -35,25 +36,17 @@ public class FileHelper {
         return (null, convertedCodec);
     }
 
-    public static bool CheckSupportedFile(SupportCodecType codec, SupportedContainer container) {
+    public static bool CheckSupportedFile(VideoCodec codec, SupportedContainer container) {
         switch (container) {
             case SupportedContainer.Mp4:
-                return codec is SupportCodecType.Av1 or SupportCodecType.Avc or SupportCodecType.Hevc or SupportCodecType.Vp9;
+                return codec is VideoCodec.av1 or VideoCodec.hevc or VideoCodec.vp9;
             case SupportedContainer.Webm:
-                return codec is SupportCodecType.Av1 or SupportCodecType.Vp8 or SupportCodecType.Vp9;
+                return codec is VideoCodec.av1 or VideoCodec.vp8 or VideoCodec.vp9;
             default:
                 return false;
         }
     }
-    
-    public enum SupportCodecType {
-        Av1,
-        Hevc,
-        Avc,
-        Vp8,
-        Vp9
-    }
-    
+
     public enum SupportedContainer {
         Mp4,
         Webm
