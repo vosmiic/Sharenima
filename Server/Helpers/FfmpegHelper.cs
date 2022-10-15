@@ -36,6 +36,10 @@ public class FfmpegHelper {
 
         return true;
     }
+
+    public static async Task<IMediaInfo> GetFileMetadata(string filePath) {
+        return await FFmpeg.GetMediaInfo(filePath);
+    }
     
 
     public static async Task<bool> IsFfmpegInstalled(string argument) {
