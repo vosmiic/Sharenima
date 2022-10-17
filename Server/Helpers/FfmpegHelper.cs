@@ -13,11 +13,14 @@ public class FfmpegHelper {
         return ffprobeResult;
     }
 
-    public static async Task<bool> ConvertVideo(VideoCodec codec, string videoFilePath, string convertedVideoOutputPath) {
+    public static async Task<bool> ConvertVideo(ILogger logger, VideoCodec codec, string videoFilePath, string convertedVideoOutputPath) {
         IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(videoFilePath);
 
         IStream? videoStream = mediaInfo.VideoStreams.FirstOrDefault()?.SetCodec(codec);
-        if (videoStream == null) return false;
+        if (videoStream == null) {
+            logger.LogInformation("Cannot convert video; no video streams detected");
+            return false;
+        }
         IStream? audioStream = mediaInfo.AudioStreams.FirstOrDefault();
 
         IConversion conversion = FFmpeg.Conversions.New()
@@ -31,6 +34,7 @@ public class FfmpegHelper {
             await conversion.Start();
         } catch (Exception e) {
             // todo log e
+            logger.LogError($"Error converting video; {e.Message}");
             return false;
         }
 

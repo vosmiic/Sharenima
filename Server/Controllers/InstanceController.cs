@@ -16,12 +16,15 @@ public class InstanceController : ControllerBase {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ConnectionMapping _connectionMapping;
+    private readonly ILogger<InstanceController> _logger;
 
     public InstanceController(IDbContextFactory<GeneralDbContext> contextFactory,
-        UserManager<ApplicationUser> userManager, ConnectionMapping connectionMapping) {
+        UserManager<ApplicationUser> userManager, ConnectionMapping connectionMapping,
+        ILogger<InstanceController> logger) {
         _contextFactory = contextFactory;
         _userManager = userManager;
         _connectionMapping = connectionMapping;
+        _logger = logger;
     }
 
     /// <summary>
@@ -43,7 +46,8 @@ public class InstanceController : ControllerBase {
         context.Instances.Add(instance);
 
         await context.SaveChangesAsync();
-
+        
+        _logger.LogInformation($"Instance {instance.Id} created by user {userId}");
         return Ok(instance);
     }
 

@@ -10,10 +10,12 @@ namespace Sharenima.Server.SignalR;
 public class QueueHub : Hub {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
     private readonly ConnectionMapping _connectionMapping;
+    private readonly ILogger<QueueHub> _logger;
 
-    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping) {
+    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger) {
         _contextFactory = contextFactory;
         _connectionMapping = connectionMapping;
+        _logger = logger;
     }
 
     public override Task OnConnectedAsync() {
@@ -24,6 +26,7 @@ public class QueueHub : Hub {
         if (instanceId.Count == 0) return Task.CompletedTask;
 
         _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, userId != null ? Guid.Parse(userId) : null, userId);
+        _logger.LogInformation($"Added {(userId != null ? $"user {userId}" : "anonymous user")} to instance {instanceId[0]} connection map");
         return base.OnConnectedAsync();
     }
 
@@ -35,6 +38,7 @@ public class QueueHub : Hub {
         if (instanceId.Count == 0) return Task.CompletedTask;
 
         _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, userId != null ? Guid.Parse(userId) : null);
+        _logger.LogInformation($"Removed {(userId != null ? $"user {userId}" : "anonymous user")} from instance {instanceId[0]} connection map");
         return base.OnDisconnectedAsync(exception);
     }
 
@@ -49,7 +53,7 @@ public class QueueHub : Hub {
             Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
             if (queue != null) {
                 Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
-                //context.Remove(queue);
+                context.Remove(queue);
                 if (instance != null) {
                     instance.VideoTime = TimeSpan.Zero;
                 }

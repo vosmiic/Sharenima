@@ -12,10 +12,12 @@ namespace Sharenima.Server.Controllers;
 public class SettingsController : ControllerBase {
     private readonly IDbContextFactory<ApplicationDbContext> _applicationDbContextFactory;
     private readonly IDbContextFactory<GeneralDbContext> _generalDbCotextFactory;
+    private readonly ILogger<SettingsController> _logger;
 
-    public SettingsController(IDbContextFactory<ApplicationDbContext> applicationDbContextFactory, IDbContextFactory<GeneralDbContext> generalDbCotextFactory) {
+    public SettingsController(IDbContextFactory<ApplicationDbContext> applicationDbContextFactory, IDbContextFactory<GeneralDbContext> generalDbCotextFactory, ILogger<SettingsController> logger) {
         _applicationDbContextFactory = applicationDbContextFactory;
         _generalDbCotextFactory = generalDbCotextFactory;
+        _logger = logger;
     }
 
 
@@ -69,6 +71,7 @@ public class SettingsController : ControllerBase {
                 }
             }
 
+            _logger.LogInformation($"Saved instance {instance.Id} instance-level permissions");
             await generalContext.SaveChangesAsync();
         } else {
             await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
@@ -91,6 +94,7 @@ public class SettingsController : ControllerBase {
                 }
             }
 
+            _logger.LogInformation($"Saved instance {instance.Id} user {applicationUser.Id} permissions");
             await context.SaveChangesAsync();
         }
         

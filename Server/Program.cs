@@ -38,6 +38,16 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 
+builder.Logging.ClearProviders();
+builder.Logging.AddProvider(new ConsoleLoggerProvider(new ConsoleLoggerConfiguration {
+    Colour = ConsoleColor.White,
+    LogLevel = LogLevel.Information
+}));
+builder.Logging.AddProvider(new ConsoleLoggerProvider(new ConsoleLoggerConfiguration {
+    Colour = ConsoleColor.Red,
+    LogLevel = LogLevel.Error
+}));
+
 builder.Services.AddSingleton<ConnectionMapping>();
 
 builder.Services.AddScoped<IAuthorizationHandler, ChangeProgressHandler>();
