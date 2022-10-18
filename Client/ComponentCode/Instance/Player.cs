@@ -30,7 +30,7 @@ public partial class Player : ComponentBase {
         }
         TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
         var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
-        if (difference is > 500 or < -500) {
+        if (difference is > 300 or < -300) {
             HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime);
             VideoTime = newVideoTime;
         }
@@ -103,7 +103,7 @@ public partial class Player : ComponentBase {
 
         HubConnection.On<TimeSpan>("ReceiveProgressChange", async (newTime) => {
             var difference = newTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
-            if (difference is > 600 or < -600)
+            if (difference is > 700 or < -700)
                 await SendProgressChange(newTime.TotalSeconds);
         });
     }

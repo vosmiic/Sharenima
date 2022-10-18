@@ -41,7 +41,7 @@ setInterval(function () {
             dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
         }
     }
-}, 500)
+}, 300)
 
 //functions
 function playYT() {
