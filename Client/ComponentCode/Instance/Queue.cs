@@ -132,6 +132,10 @@ public partial class Queue : ComponentBase {
         HubConnection.On<int>("ReceiveStateChange", async (state) => {
             if (state == 0) {
                 CurrentQueue.Remove(CurrentQueue.First());
+                var nextVideo = CurrentQueue.FirstOrDefault();
+                if (nextVideo != null) {
+                    QueuePlayerService.SetCurrentQueueVideo(nextVideo);
+                }
                 await CurrentQueueChanged.InvokeAsync(CurrentQueue);
                 StateHasChanged();
             }

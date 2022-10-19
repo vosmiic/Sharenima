@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
@@ -52,7 +53,7 @@ public partial class Player : ComponentBase {
 
     protected override async Task OnInitializedAsync() {
         QueuePlayerService.RefreshRequested += RefreshState;
-        QueuePlayerService.ChangeVideo += ChangeVideo;
+        QueuePlayerService.ChangeVideo += LoadNextVideo;
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
 
@@ -123,7 +124,16 @@ public partial class Player : ComponentBase {
         StateHasChanged();
     }
 
-    private async void ChangeVideo() {
-        await _jsRuntime.InvokeVoidAsync("loadVideo", RequestVideo());
+    private async void LoadNextVideo() {
+        var nextVideo = QueuePlayerService.CurrentQueueVideo;
+        if (nextVideo != null) {
+            switch (nextVideo.VideoType) {
+                case VideoType.YouTube:
+                    Regex regex = new Regex(@"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^""&?\/\s]{11})", RegexOptions.IgnoreCase);
+                    MatchCollection matchCollection = regex.Matches(nextVideo.Url);
+                    await _jsRuntime.InvokeVoidAsync("loadVideo", matchCollection[0].Groups[1].Value);
+                    break;
+            }
+        }
     }
 }
