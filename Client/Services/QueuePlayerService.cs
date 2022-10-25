@@ -4,20 +4,17 @@ namespace Sharenima.Client;
 
 public class QueuePlayerService
 {
-    public Queue? CurrentQueueVideo { get; private set; }
-    public event Action RefreshRequested;
-    public event Action ChangeVideo;
-
-    public void SetCurrentQueueVideo(Queue queue) {
-        CurrentQueueVideo = queue;
-        CallChangeVideo();
-    }
-    public void CallRequestRefresh()
-    {
-        RefreshRequested?.Invoke();
+    public List<Queue> CurrentQueue { get; private set; } = new();
+    public void AddToQueue(Queue queue) {
+        
+        CurrentQueue.Add(queue);
     }
 
-    public void CallChangeVideo() {
-        ChangeVideo?.Invoke();
+    public void RemoveFromQueue(Queue queue) {
+        CurrentQueue.Remove(queue);
+    }
+
+    public void SetQueue(List<Queue> queues) {
+        CurrentQueue = queues;
     }
 }
