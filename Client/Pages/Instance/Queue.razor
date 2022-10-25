@@ -8,10 +8,10 @@
         <MatFileUpload OnChange="UploadVideoToQueue" Label="Drag and drop here or click to browse"></MatFileUpload>
     </MatListItem>
     <MatListDivider />
-    @if (CurrentQueue == null) {
+    @if (QueuePlayerService.CurrentQueue.Count == 0) {
         <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
     } else {
-        foreach (Sharenima.Shared.Queue queue in CurrentQueue) {
+        foreach (Sharenima.Shared.Queue queue in QueuePlayerService.CurrentQueue) {
             <MatListItem @key="queue.Id" Style="height: unset">
                 <MatCard>
                     <MatCardContent>

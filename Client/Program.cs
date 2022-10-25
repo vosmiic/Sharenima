@@ -16,6 +16,7 @@ builder.Services.AddHttpClient("anonymous", client => client.BaseAddress = new U
 // Supply HttpClient instances that include access tokens when making requests to the server project
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Sharenima.ServerAPI"));
 builder.Services.AddScoped<QueuePlayerService>();
+builder.Services.AddScoped<RefreshService>();
 
 builder.Services.AddApiAuthorization();
 builder.Services.AddMatBlazor();
