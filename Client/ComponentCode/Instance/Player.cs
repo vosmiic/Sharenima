@@ -9,16 +9,19 @@ namespace Sharenima.Client.ComponentCode;
 public partial class Player : ComponentBase {
     [Inject] private IJSRuntime _jsRuntime { get; set; }
     [Inject] private QueuePlayerService QueuePlayerService { get; set; }
+    [Inject]
+    protected RefreshService RefreshService { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public TimeSpan VideoTime { get; set; }
-    [Parameter] public Sharenima.Shared.Queue? Video { get; set; }
+    protected Sharenima.Shared.Queue? Video { get; set; }
     private DotNetObjectReference<Player>? objRef;
     private bool _initialVideoLoad = true;
 
     [JSInvokable]
     public void StateChange(int value) {
         if (value is > -1 and < 3) {
+            Console.WriteLine($"State changed: {value}");
             HubConnection.SendAsync("SendStateChange", InstanceId, value, Video.Id);
         }
     }
@@ -32,6 +35,7 @@ public partial class Player : ComponentBase {
         TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
         var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
         if (difference is > 300 or < -300) {
+            Console.WriteLine("Sending progress change");
             HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime);
             VideoTime = newVideoTime;
         }
@@ -52,15 +56,19 @@ public partial class Player : ComponentBase {
         VideoTime.TotalSeconds;
 
     protected override async Task OnInitializedAsync() {
-        QueuePlayerService.RefreshRequested += RefreshState;
-        QueuePlayerService.ChangeVideo += LoadNextVideo;
+        RefreshService.PlayerRefreshRequested += NewVideo;
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
 
         await Hub();
     }
 
-    protected override async Task OnParametersSetAsync() {
+    private void NewVideo() {
+        Video = QueuePlayerService.CurrentQueue.FirstOrDefault();
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (Video != null) {
             switch (Video?.VideoType) {
                 case VideoType.YouTube:
@@ -71,6 +79,10 @@ public partial class Player : ComponentBase {
                     break;
             }
         }
+    }
+
+    protected override async Task OnParametersSetAsync() {
+        Video = QueuePlayerService.CurrentQueue.FirstOrDefault();
     }
 
     private async Task Hub() {
@@ -118,22 +130,5 @@ public partial class Player : ComponentBase {
         }
 
         return false;
-    }
-
-    private void RefreshState() {
-        StateHasChanged();
-    }
-
-    private async void LoadNextVideo() {
-        var nextVideo = QueuePlayerService.CurrentQueueVideo;
-        if (nextVideo != null) {
-            switch (nextVideo.VideoType) {
-                case VideoType.YouTube:
-                    Regex regex = new Regex(@"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^""&?\/\s]{11})", RegexOptions.IgnoreCase);
-                    MatchCollection matchCollection = regex.Matches(nextVideo.Url);
-                    await _jsRuntime.InvokeVoidAsync("loadVideo", matchCollection[0].Groups[1].Value);
-                    break;
-            }
-        }
     }
 }
