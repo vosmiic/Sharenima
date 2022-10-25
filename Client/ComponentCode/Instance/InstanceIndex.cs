@@ -13,15 +13,20 @@ public partial class Instance : ComponentBase {
     [Inject] private NavigationManager _navigationManager { get; set; }
     [Inject] IAccessTokenProvider TokenProvider { get; set; }
     [Inject] protected IMatToaster _toaster { get; set; }
+    [Inject]
+    protected QueuePlayerService QueuePlayerService { get; set; }
+    [Inject]
+    protected RefreshService RefreshService { get; set; }
     [Parameter] public string InstanceId { get; set; }
     protected HubConnection? _hubConnection;
     protected Sharenima.Shared.Instance? SelectedInstance { get; set; }
-    protected ICollection<Sharenima.Shared.Queue>? CurrentQueue { get; set; }
     protected bool settingsIsOpen = false;
     private HttpClient _httpClient { get; set; }
 
 
     protected override async Task OnInitializedAsync() {
+        RefreshService.InstanceIndexRefreshRequested += StateHasChanged;
+
         _httpClient = HttpClientFactory.CreateClient("anonymous");
         HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"Instance?instanceName={InstanceId}");
 
