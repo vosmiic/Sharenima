@@ -37,7 +37,7 @@ function onYouTubeIframeAPIReady() {
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined') {
         var currentTime = getCurrentTime();
-        if (currentTime) {
+        if (currentTime && player.getCurrentState() !== 0) {
             dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
         }
     }
