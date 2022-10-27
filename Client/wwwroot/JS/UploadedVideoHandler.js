@@ -77,4 +77,4 @@ setInterval(function () {
             dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
         }
     }
-}, 500)
+}, 300)
