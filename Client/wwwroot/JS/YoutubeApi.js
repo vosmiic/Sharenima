@@ -37,7 +37,7 @@ function onYouTubeIframeAPIReady() {
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined') {
         var currentTime = getCurrentTime();
-        if (currentTime && player.getCurrentState() !== 0) {
+        if (currentTime && player.getPlayerState() !== 0) {
             dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
         }
     }
@@ -72,4 +72,10 @@ function loadVideo(videoId) {
 
 function youtubeStateChange(event) {
     dotNetHelper.invokeMethodAsync('StateChange', event.data);
+}
+
+function youtubeDestroy() {
+    if (player) {
+        player.destroy();
+    }
 }
