@@ -15,6 +15,7 @@ public partial class Player : ComponentBase {
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public TimeSpan VideoTime { get; set; }
     protected Sharenima.Shared.Queue? Video { get; set; }
+    private int playerState { get; set; }
     private DotNetObjectReference<Player>? objRef;
     private bool _initialVideoLoad = true;
 
@@ -22,22 +23,28 @@ public partial class Player : ComponentBase {
     public void StateChange(int value) {
         if (value is > -1 and < 3) {
             Console.WriteLine($"State changed: {value}");
+            playerState = value;
             HubConnection.SendAsync("SendStateChange", InstanceId, value, Video.Id);
         }
     }
 
     [JSInvokable]
     public async void ProgressChange(double newTime) {
-        if (_initialVideoLoad) {
-            if (await SendProgressChange(VideoTime.TotalSeconds))
-                _initialVideoLoad = false;
-        }
-        TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
-        var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
-        if (difference is > 300 or < -300) {
-            Console.WriteLine("Sending progress change");
-            HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime);
-            VideoTime = newVideoTime;
+        if (playerState != 0) {
+            if (_initialVideoLoad) {
+                if (await SendProgressChange(VideoTime.TotalSeconds))
+                    _initialVideoLoad = false;
+            }
+
+            TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
+            var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
+            if (difference is > 300 or < -300) {
+                Console.WriteLine("Sending progress change");
+                HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime);
+                VideoTime = newVideoTime;
+            }
+        } else {
+            Console.WriteLine("Video has ended; not updating db");
         }
     }
 
@@ -81,7 +88,7 @@ public partial class Player : ComponentBase {
         }
     }
 
-    protected override async Task OnParametersSetAsync() {
+    protected override void OnParametersSet() {
         Video = QueuePlayerService.CurrentQueue.FirstOrDefault();
     }
 
@@ -90,6 +97,8 @@ public partial class Player : ComponentBase {
             switch (state) {
                 case 0:
                     //unload player
+                    await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
+                    VideoTime = TimeSpan.Zero;
                     break;
                 case 1:
                     switch (Video?.VideoType) {
