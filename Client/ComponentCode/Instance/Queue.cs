@@ -3,6 +3,7 @@ using MatBlazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
+using Sharenima.Shared;
 using Sharenima.Shared.Helpers;
 using File = Sharenima.Shared.File;
 
@@ -115,8 +116,8 @@ public partial class Queue : ComponentBase {
             }
         });
 
-        HubConnection.On<int>("ReceiveStateChange", (state) => {
-            if (state == 0) {
+        HubConnection.On<State>("ReceiveStateChange", (state) => {
+            if (state == State.Ended) {
                 // remove current video since it has been completed
                 Console.WriteLine("Video has ended");
                 QueuePlayerService.RemoveFromQueue(QueuePlayerService.CurrentQueue.First());

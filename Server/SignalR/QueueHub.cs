@@ -47,8 +47,8 @@ public class QueueHub : Hub {
     }
 
     [Authorize(Policy = "ChangeProgress")]
-    public async Task SendStateChange(string groupName, int state, Guid queueId) {
-        if (state == 0) {
+    public async Task SendStateChange(string groupName, State playerState, Guid queueId) {
+        if (playerState == State.Ended) {
             await using var context = await _contextFactory.CreateDbContextAsync();
             Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
             if (queue != null) {
@@ -60,7 +60,7 @@ public class QueueHub : Hub {
                 await context.SaveChangesAsync();
             }
         }
-        await Clients.Group(groupName).SendAsync("ReceiveStateChange", state);
+        await Clients.Group(groupName).SendAsync("ReceiveStateChange", playerState);
     }
 
     [Authorize(Policy = "ChangeProgress")]

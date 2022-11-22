@@ -15,22 +15,22 @@ public partial class Player : ComponentBase {
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public TimeSpan VideoTime { get; set; }
     protected Sharenima.Shared.Queue? Video { get; set; }
-    private int playerState { get; set; }
+    private State playerState { get; set; }
     private DotNetObjectReference<Player>? objRef;
     private bool _initialVideoLoad = true;
 
     [JSInvokable]
     public void StateChange(int value) {
         if (value is > -1 and < 3) {
-            Console.WriteLine($"State changed: {value}");
-            playerState = value;
-            HubConnection.SendAsync("SendStateChange", InstanceId, value, Video.Id);
+            playerState = (State)value;
+            Console.WriteLine($"State changed: {playerState}");
+            HubConnection.SendAsync("SendStateChange", InstanceId, playerState, Video.Id);
         }
     }
 
     [JSInvokable]
     public async void ProgressChange(double newTime) {
-        if (playerState != 0) {
+        if (playerState != State.Ended) {
             if (_initialVideoLoad) {
                 if (await SendProgressChange(VideoTime.TotalSeconds))
                     _initialVideoLoad = false;
@@ -93,14 +93,14 @@ public partial class Player : ComponentBase {
     }
 
     private async Task Hub() {
-        HubConnection.On<int>("ReceiveStateChange", async (state) => {
+        HubConnection.On<State>("ReceiveStateChange", async (state) => {
             switch (state) {
-                case 0:
+                case State.Ended:
                     //unload player
                     await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
                     VideoTime = TimeSpan.Zero;
                     break;
-                case 1:
+                case State.Playing:
                     switch (Video?.VideoType) {
                         case VideoType.YouTube:
                             await _jsRuntime.InvokeVoidAsync("playYT");
@@ -110,7 +110,7 @@ public partial class Player : ComponentBase {
                             break;
                     }
                     break;
-                case 2:
+                case State.Paused:
                     switch (Video?.VideoType) {
                         case VideoType.YouTube:
                             await _jsRuntime.InvokeVoidAsync("pauseYT");
