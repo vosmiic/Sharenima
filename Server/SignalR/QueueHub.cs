@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
 using Sharenima.Shared;
 
-namespace Sharenima.Server.SignalR; 
+namespace Sharenima.Server.SignalR;
 
 public class QueueHub : Hub {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
@@ -48,18 +48,24 @@ public class QueueHub : Hub {
 
     [Authorize(Policy = "ChangeProgress")]
     public async Task SendStateChange(string groupName, State playerState, Guid queueId) {
-        if (playerState == State.Ended) {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
-            if (queue != null) {
-                Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
+        if (queue != null) {
+            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
+            if (playerState == State.Ended) {
                 context.Remove(queue);
                 if (instance != null) {
                     instance.VideoTime = TimeSpan.Zero;
                 }
-                await context.SaveChangesAsync();
             }
+
+            if (instance != null) {
+                instance.PlayerState = playerState;
+            }
+            await context.SaveChangesAsync();
         }
+
         await Clients.Group(groupName).SendAsync("ReceiveStateChange", playerState);
     }
 
