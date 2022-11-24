@@ -13,6 +13,7 @@ public partial class Player : ComponentBase {
     protected RefreshService RefreshService { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
+    [Parameter] public State? InitialState { get; set; }
     [Parameter] public TimeSpan VideoTime { get; set; }
     protected Sharenima.Shared.Queue? Video { get; set; }
     private State playerState { get; set; }
@@ -79,10 +80,10 @@ public partial class Player : ComponentBase {
         if (Video != null) {
             switch (Video?.VideoType) {
                 case VideoType.YouTube:
-                    await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo());
+                    await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo(), InitialState is State.Playing);
                     break;
                 case VideoType.FileUpload:
-                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions");
+                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing);
                     break;
             }
         }
