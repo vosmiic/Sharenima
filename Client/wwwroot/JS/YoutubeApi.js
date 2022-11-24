@@ -1,7 +1,9 @@
 let initialVideoId;
-function runYoutubeApi(videoId) {
+let autoplay;
+function runYoutubeApi(videoId, playingState) {
 //YouTube embed with YouTube Iframe API
     initialVideoId = videoId;
+    autoplay = playingState;
     setTimeout(() => {
         var tag = document.createElement('script');
 
@@ -25,13 +27,26 @@ function onYouTubeIframeAPIReady() {
         width: '640',
         videoId: initialVideoId,
         playerVars: {
-            'playsinline': 1,
-            'autoplay': 1
+            'playsinline': 1
         },
         events: {
+            'onReady': youtubeOnReady,
             'onStateChange': youtubeStateChange
         }
     });
+}
+
+function youtubeOnReady(event) {
+    if (autoplay) {
+        event.target.playVideo();
+        setTimeout(() => {
+            if (event.target.getPlayerState() === -1) {
+                // user must have not interacted with the site yet, got to mute and then play again
+                event.target.mute();
+                event.target.playVideo();
+            }
+        }, 500);
+    }
 }
 
 setInterval(function () {

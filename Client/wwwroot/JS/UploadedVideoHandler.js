@@ -8,7 +8,7 @@ let video;
 let lastExecution = new Date();
 let videoPlaying;
 
-function loadVideoFunctions() {
+function loadVideoFunctions(autoplay) {
     video = document.querySelector('#mediaPlayer');
 
     video.addEventListener('play', function () {
@@ -37,6 +37,13 @@ function loadVideoFunctions() {
             video.currentTime = time;
         });
     });
+    
+    if (autoplay) {
+        video.play().catch(() => {
+            video.muted = true;
+            video.play();
+        })
+    }
 }
 
 function uploadedVideoStateChange(state) {
