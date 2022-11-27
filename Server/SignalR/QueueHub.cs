@@ -18,28 +18,30 @@ public class QueueHub : Hub {
         _logger = logger;
     }
 
-    public override Task OnConnectedAsync() {
+    public override async Task OnConnectedAsync() {
         string? userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        Guid? parsedUserId = userId != null ? Guid.Parse(userId) : null;
         var httpContext = Context.GetHttpContext();
-        if (httpContext == null) return Task.CompletedTask;
+        if (httpContext == null) return;
         var instanceId = httpContext.Request.Query["instanceId"];
-        if (instanceId.Count == 0) return Task.CompletedTask;
+        if (instanceId.Count == 0) return;
 
-        _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, userId != null ? Guid.Parse(userId) : null, userId);
-        _logger.LogInformation($"Added {(userId != null ? $"user {userId}" : "anonymous user")} to instance {instanceId[0]} connection map");
-        return base.OnConnectedAsync();
+        _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId, userId);
+        _logger.LogInformation($"Added {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} to instance {instanceId[0]} connection map");
+        if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", parsedUserId.Value);
     }
 
-    public override Task OnDisconnectedAsync(Exception? exception) {
+    public override async Task OnDisconnectedAsync(Exception? exception) {
         string? userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        Guid? parsedUserId = userId != null ? Guid.Parse(userId) : null;
         var httpContext = Context.GetHttpContext();
-        if (httpContext == null) return Task.CompletedTask;
+        if (httpContext == null) return;
         var instanceId = httpContext.Request.Query["instanceId"];
-        if (instanceId.Count == 0) return Task.CompletedTask;
+        if (instanceId.Count == 0) return;
 
-        _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, userId != null ? Guid.Parse(userId) : null);
-        _logger.LogInformation($"Removed {(userId != null ? $"user {userId}" : "anonymous user")} from instance {instanceId[0]} connection map");
-        return base.OnDisconnectedAsync(exception);
+        _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId);
+        _logger.LogInformation($"Removed {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} from instance {instanceId[0]} connection map");
+        if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserLeft", parsedUserId.Value);
     }
 
     public async Task JoinGroup(string groupName) {
@@ -54,7 +56,7 @@ public class QueueHub : Hub {
         if (queue != null) {
             Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
             if (playerState == State.Ended) {
-                context.Remove(queue);
+                //context.Remove(queue);
                 if (instance != null) {
                     instance.VideoTime = TimeSpan.Zero;
                 }

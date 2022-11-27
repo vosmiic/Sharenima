@@ -23,6 +23,26 @@ public partial class Chat : ComponentBase {
         if (authState.User.Identity is { IsAuthenticated: true })
             _authHttpClient = HttpClientFactory.CreateClient("auth");
         _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
+
+        HubConnection.On<Guid>("UserJoined", (userId) => {
+            if (UserList != null) {
+                if (!UserList.Contains(userId.ToString())) UserList.Add(userId.ToString());
+            } else {
+                UserList = new List<string>();
+                UserList.Add(userId.ToString());
+            }
+            StateHasChanged();
+        });
+
+        HubConnection.On<Guid>("UserLeft", (userId) => {
+            if (UserList != null) {
+                UserList.Remove(userId.ToString());
+            } else {
+                UserList = new List<string>();
+                UserList.Remove(userId.ToString());
+            }
+            StateHasChanged();
+        });
     }
 
     protected override async Task OnParametersSetAsync() {
