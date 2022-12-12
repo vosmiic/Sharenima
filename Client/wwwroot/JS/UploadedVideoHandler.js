@@ -18,7 +18,10 @@ function loadVideoFunctions(autoplay) {
 
     video.addEventListener('pause', function () {
         videoPlaying = false;
-        uploadedVideoStateChange(2);
+        if (video.readyState === 4) {
+            console.log("pause")
+            uploadedVideoStateChange(2);
+        }
     });
     
     video.addEventListener('ended', function () {
@@ -51,13 +54,16 @@ function uploadedVideoStateChange(state) {
 }
 
 function updateBackendProgress() {
-    dotNetHelper.invokeMethodAsync('ProgressChange', video.currentTime);
+    dotNetHelper.invokeMethodAsync('ProgressChange', video.currentTime, true);
     lastExecution = new Date();
 }
 
 function playFileUpload() {
     if (video.paused && !videoPlaying) {
-        video.play();
+        video.play().catch(() => {
+            video.muted = true;
+            video.play();
+        });
     }
 }
 
@@ -81,7 +87,7 @@ setInterval(function () {
     if (typeof video !== 'undefined' && video !== 'undefined' && !video.ended) {
         var currentTime = video.currentTime;
         if (currentTime) {
-            dotNetHelper.invokeMethodAsync('ProgressChange', currentTime);
+            dotNetHelper.invokeMethodAsync('ProgressChange', currentTime, false);
         }
     }
-}, 300)
+}, 500)

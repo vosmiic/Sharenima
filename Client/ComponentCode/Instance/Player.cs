@@ -30,7 +30,7 @@ public partial class Player : ComponentBase {
     }
 
     [JSInvokable]
-    public async void ProgressChange(double newTime) {
+    public async void ProgressChange(double newTime, bool seeked) {
         if (playerState != State.Ended) {
             if (_initialVideoLoad) {
                 if (await SendProgressChange(VideoTime.TotalSeconds))
@@ -41,7 +41,7 @@ public partial class Player : ComponentBase {
             var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
             if (difference is > 300 or < -300) {
                 Console.WriteLine("Sending progress change");
-                HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime);
+                HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime, seeked);
                 VideoTime = newVideoTime;
             }
         } else {
@@ -98,7 +98,8 @@ public partial class Player : ComponentBase {
             switch (state) {
                 case State.Ended:
                     //unload player
-                    await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
+                    if (Video?.VideoType == VideoType.YouTube)
+                        await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
                     VideoTime = TimeSpan.Zero;
                     break;
                 case State.Playing:
