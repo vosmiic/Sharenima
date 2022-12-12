@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Sharenima.Server.Data;
 using Sharenima.Shared;
 
@@ -11,11 +12,13 @@ public class QueueHub : Hub {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
     private readonly ConnectionMapping _connectionMapping;
     private readonly ILogger<QueueHub> _logger;
+    private readonly IMemoryCache _memoryCache;
 
-    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger) {
+    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger, IMemoryCache memoryCache) {
         _contextFactory = contextFactory;
         _connectionMapping = connectionMapping;
         _logger = logger;
+        _memoryCache = memoryCache;
     }
 
     public override async Task OnConnectedAsync() {
@@ -63,6 +66,7 @@ public class QueueHub : Hub {
             }
 
             if (instance != null) {
+                _logger.LogInformation($"Updating instance {instance.Id} state in database");
                 instance.PlayerState = playerState;
             }
             await context.SaveChangesAsync();
@@ -72,14 +76,19 @@ public class QueueHub : Hub {
     }
 
     [Authorize(Policy = "ChangeProgress")]
-    public async Task SendProgressChange(string groupName, TimeSpan videoTime) {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        Guid parsedGroupName;
-        Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => Guid.TryParse(groupName, out parsedGroupName) && instance.Id == parsedGroupName);
-        if (instance == null) return;
-        instance.VideoTime = videoTime;
-        await context.SaveChangesAsync();
+    public async Task SendProgressChange(string groupName, TimeSpan videoTime, bool seeked) {
+        if (seeked ||
+            !_memoryCache.TryGetValue($"lastUpdate-{groupName}", out DateTime lastUpdate) ||
+            DateTime.UtcNow > lastUpdate.AddMilliseconds(300)) {
+            _memoryCache.Set($"lastUpdate-{groupName}", DateTime.UtcNow, TimeSpan.FromSeconds(2));
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            Guid parsedGroupName;
+            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => Guid.TryParse(groupName, out parsedGroupName) && instance.Id == parsedGroupName);
+            if (instance == null) return;
+            instance.VideoTime = videoTime;
+            await context.SaveChangesAsync();
 
-        await Clients.Group(groupName).SendAsync("ReceiveProgressChange", videoTime);
+            await Clients.Group(groupName).SendAsync("ReceiveProgressChange", videoTime);
+        }
     }
 }
