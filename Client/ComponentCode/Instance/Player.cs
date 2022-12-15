@@ -9,8 +9,7 @@ namespace Sharenima.Client.ComponentCode;
 public partial class Player : ComponentBase {
     [Inject] private IJSRuntime _jsRuntime { get; set; }
     [Inject] private QueuePlayerService QueuePlayerService { get; set; }
-    [Inject]
-    protected RefreshService RefreshService { get; set; }
+    [Inject] protected RefreshService RefreshService { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public State? InitialState { get; set; }
@@ -51,8 +50,16 @@ public partial class Player : ComponentBase {
 
     [JSInvokable]
     public string RequestVideo() {
-        int lastIndex = Video.Url.LastIndexOf("?v=", StringComparison.CurrentCulture) + 3;
-        return Video.Url.Substring(lastIndex, Video.Url.Length - lastIndex);
+        Regex regex = new Regex(@"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^""&?\/\s]{11})", RegexOptions.IgnoreCase);
+
+        MatchCollection matchCollection = regex.Matches(Video.Url);
+        string videoId = "";
+        foreach (Match match in matchCollection) {
+            GroupCollection groupCollection = match.Groups;
+            videoId = groupCollection[1].Value;
+        }
+
+        return videoId;
     }
 
     /// <summary>
@@ -65,6 +72,7 @@ public partial class Player : ComponentBase {
 
     protected override async Task OnInitializedAsync() {
         RefreshService.PlayerRefreshRequested += NewVideo;
+        RefreshService.PlayerVideoEnded += EndVideo;
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
 
@@ -73,7 +81,14 @@ public partial class Player : ComponentBase {
 
     private void NewVideo() {
         Video = QueuePlayerService.CurrentQueue.FirstOrDefault();
+        InitialState = State.Playing;
         StateHasChanged();
+    }
+
+    private async void EndVideo() {
+        if (Video?.VideoType == VideoType.YouTube) await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
+
+        VideoTime = TimeSpan.Zero;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
@@ -96,12 +111,6 @@ public partial class Player : ComponentBase {
     private async Task Hub() {
         HubConnection.On<State>("ReceiveStateChange", async (state) => {
             switch (state) {
-                case State.Ended:
-                    //unload player
-                    if (Video?.VideoType == VideoType.YouTube)
-                        await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
-                    VideoTime = TimeSpan.Zero;
-                    break;
                 case State.Playing:
                     switch (Video?.VideoType) {
                         case VideoType.YouTube:
@@ -111,6 +120,7 @@ public partial class Player : ComponentBase {
                             await _jsRuntime.InvokeVoidAsync("playFileUpload");
                             break;
                     }
+
                     break;
                 case State.Paused:
                     switch (Video?.VideoType) {
@@ -121,6 +131,7 @@ public partial class Player : ComponentBase {
                             await _jsRuntime.InvokeVoidAsync("pauseFileUpload");
                             break;
                     }
+
                     break;
             }
         });
