@@ -121,6 +121,7 @@ public partial class Queue : ComponentBase {
                 // remove current video since it has been completed
                 Console.WriteLine("Video has ended");
                 QueuePlayerService.RemoveFromQueue(QueuePlayerService.CurrentQueue.First());
+                RefreshService.CallPlayerVideoEnded();
                 RefreshService.CallPlayerRefreshRequested();
                 StateHasChanged();
             }
