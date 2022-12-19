@@ -32,7 +32,7 @@ public partial class Player : ComponentBase {
     public async void ProgressChange(double newTime, bool seeked) {
         if (playerState != State.Ended) {
             if (_initialVideoLoad) {
-                if (await SendProgressChange(VideoTime.TotalSeconds))
+                if (await SendProgressChange(VideoTime.TotalSeconds, Video?.Id))
                     _initialVideoLoad = false;
             }
 
@@ -86,8 +86,9 @@ public partial class Player : ComponentBase {
     }
 
     private async void EndVideo() {
-        if (Video?.VideoType == VideoType.YouTube) await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
-
+        if (Video?.VideoType == VideoType.YouTube) {
+            await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
+        }
         VideoTime = TimeSpan.Zero;
     }
 
@@ -98,7 +99,7 @@ public partial class Player : ComponentBase {
                     await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo(), InitialState is State.Playing);
                     break;
                 case VideoType.FileUpload:
-                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing);
+                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing, Video.Id);
                     break;
             }
         }
@@ -139,16 +140,16 @@ public partial class Player : ComponentBase {
         HubConnection.On<TimeSpan>("ReceiveProgressChange", async (newTime) => {
             var difference = newTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
             if (difference is > 700 or < -700)
-                await SendProgressChange(newTime.TotalSeconds);
+                await SendProgressChange(newTime.TotalSeconds, Video?.Id);
         });
     }
 
-    private async Task<bool> SendProgressChange(double totalSeconds) {
+    private async Task<bool> SendProgressChange(double totalSeconds, Guid? videoId) {
         switch (Video?.VideoType) {
             case VideoType.YouTube:
-                return await _jsRuntime.InvokeAsync<bool>("setCurrentYoutubeVideoTime", totalSeconds);
+                return await _jsRuntime.InvokeAsync<bool>("setCurrentYoutubeVideoTime", totalSeconds, videoId);
             case VideoType.FileUpload:
-                return await _jsRuntime.InvokeAsync<bool>("setCurrentUploadedVideoTime", totalSeconds);
+                return await _jsRuntime.InvokeAsync<bool>("setCurrentUploadedVideoTime", totalSeconds, videoId);
         }
 
         return false;

@@ -76,14 +76,16 @@ function getCurrentTime() {
     return player.getCurrentTime();
 }
 
-function setCurrentYoutubeVideoTime(time) {
-    let success = true;
-    try {
-        player.seekTo(time, true);
-    } catch (e) {
-        success = false;
+function setCurrentYoutubeVideoTime(time, currentVideoId) {
+    if (currentVideoId === initialVideoId) {
+        let success = true;
+        try {
+            player.seekTo(time, true);
+        } catch (e) {
+            success = false;
+        }
+        return success;
     }
-    return success;
 }
 
 function loadVideo(videoId) {

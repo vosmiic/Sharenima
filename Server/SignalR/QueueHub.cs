@@ -59,7 +59,7 @@ public class QueueHub : Hub {
         if (queue != null) {
             Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
             if (playerState == State.Ended) {
-                //context.Remove(queue);
+                context.Remove(queue);
                 if (instance != null) {
                     instance.VideoTime = TimeSpan.Zero;
                 }
@@ -70,9 +70,8 @@ public class QueueHub : Hub {
                 instance.PlayerState = playerState;
             }
             await context.SaveChangesAsync();
+            await Clients.Group(groupName).SendAsync("ReceiveStateChange", playerState);
         }
-
-        await Clients.Group(groupName).SendAsync("ReceiveStateChange", playerState);
     }
 
     [Authorize(Policy = "ChangeProgress")]

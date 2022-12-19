@@ -7,9 +7,11 @@ function setDotNetHelper(value) {
 let video;
 let lastExecution = new Date();
 let videoPlaying;
+let videoId;
 
-function loadVideoFunctions(autoplay) {
+function loadVideoFunctions(autoplay, currentVideoId) {
     video = document.querySelector('#mediaPlayer');
+    this.videoId = currentVideoId;
 
     video.addEventListener('play', function () {
         videoPlaying = true;
@@ -73,14 +75,17 @@ function pauseFileUpload() {
     }
 }
 
-function setCurrentUploadedVideoTime(time) {
-    let success = true;
-    try {
-        video.currentTime = time;
-    } catch (e) {
-        success = false;
+function setCurrentUploadedVideoTime(time, currentVideoId) {
+    if (currentVideoId === videoId) {
+        let success = true;
+        try {
+            video.currentTime = time;
+        } catch (e) {
+            success = false;
+        }
+        return success;
     }
-    return success;
+    return false;
 }
 
 setInterval(function () {
