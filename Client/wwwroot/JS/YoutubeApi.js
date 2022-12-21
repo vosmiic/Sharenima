@@ -1,8 +1,10 @@
 let initialVideoId;
+let comparisonVideoId;
 let autoplay;
-function runYoutubeApi(videoId, playingState) {
+function runYoutubeApi(videoId, playingState, dbVideoId) {
 //YouTube embed with YouTube Iframe API
     initialVideoId = videoId;
+    comparisonVideoId = dbVideoId;
     autoplay = playingState;
     setTimeout(() => {
         var existingTag = document.querySelector("script[src='https://www.youtube.com/iframe_api']");
@@ -54,11 +56,13 @@ function youtubeOnReady(event) {
     }
 }
 
+let lastUpdateTime = null;
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined') {
         var currentTime = getCurrentTime();
         if (currentTime && player.getPlayerState() !== 0) {
-            dotNetHelper.invokeMethodAsync('ProgressChange', currentTime, false);
+            dotNetHelper.invokeMethodAsync('ProgressChange', currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2);
+            lastUpdateTime = currentTime;
         }
     }
 }, 500)
@@ -77,7 +81,7 @@ function getCurrentTime() {
 }
 
 function setCurrentYoutubeVideoTime(time, currentVideoId) {
-    if (currentVideoId === initialVideoId) {
+    if (currentVideoId === comparisonVideoId) {
         let success = true;
         try {
             player.seekTo(time, true);
@@ -86,6 +90,8 @@ function setCurrentYoutubeVideoTime(time, currentVideoId) {
         }
         return success;
     }
+    
+    return false;
 }
 
 function loadVideo(videoId) {

@@ -96,7 +96,7 @@ public partial class Player : ComponentBase {
         if (Video != null) {
             switch (Video?.VideoType) {
                 case VideoType.YouTube:
-                    await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo(), InitialState is State.Playing);
+                    await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo(), InitialState is State.Playing, Video.Id);
                     break;
                 case VideoType.FileUpload:
                     await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing, Video.Id);
