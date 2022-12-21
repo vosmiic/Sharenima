@@ -77,8 +77,8 @@ public class QueueHub : Hub {
     [Authorize(Policy = "ChangeProgress")]
     public async Task SendProgressChange(string groupName, TimeSpan videoTime, bool seeked) {
         if (seeked ||
-            !_memoryCache.TryGetValue($"lastUpdate-{groupName}", out DateTime lastUpdate) ||
-            DateTime.UtcNow > lastUpdate.AddMilliseconds(300)) {
+            (!_memoryCache.TryGetValue($"lastUpdate-{groupName}", out DateTime lastUpdate) &&
+            DateTime.UtcNow > lastUpdate.AddMilliseconds(300))) {
             _memoryCache.Set($"lastUpdate-{groupName}", DateTime.UtcNow, TimeSpan.FromSeconds(2));
             await using var context = await _contextFactory.CreateDbContextAsync();
             Guid parsedGroupName;
