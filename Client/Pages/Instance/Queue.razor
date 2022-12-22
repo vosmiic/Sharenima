@@ -19,7 +19,7 @@
                         <MatBody1>@queue.Name</MatBody1>
                     </MatCardContent>
                     <MatCardActions>
-                        <MatButton OnClick="() => RemoveFromVideoQueue(queue.Id)">Remove</MatButton>
+                        <MatButton OnClick="() => RemoveFromVideoQueue(queue.Id)" Disabled="!Authenticated">Remove</MatButton>
                     </MatCardActions>
                 </MatCard>
             </MatListItem>

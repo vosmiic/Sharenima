@@ -23,11 +23,15 @@ public partial class Queue : ComponentBase {
     [Parameter] public HubConnection? HubConnection { get; set; }
     private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
+    protected bool Authenticated { get; set; }
 
     protected override async Task OnInitializedAsync() {
         var authState = await authenticationStateTask;
-        if (authState.User.Identity is { IsAuthenticated: true })
+        if (authState.User.Identity is { IsAuthenticated: true }) {
             _authHttpClient = HttpClientFactory.CreateClient("auth");
+            Authenticated = true;
+        }
+
         _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
         await GetQueue();
 
