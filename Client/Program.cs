@@ -17,6 +17,20 @@ builder.Services.AddHttpClient("anonymous", client => client.BaseAddress = new U
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Sharenima.ServerAPI"));
 builder.Services.AddScoped<QueuePlayerService>();
 builder.Services.AddScoped<RefreshService>();
+builder.Services.AddScoped<PermissionService>();
+
+builder.Services.AddAuthorizationCore(options => {
+    options.AddPolicy("Admin", policy =>
+        policy.RequireClaim("Admin"));
+    options.AddPolicy("ChangeProgress", policy =>
+        policy.RequireClaim("ChangeProgress"));
+    options.AddPolicy("UploadVideo", policy =>
+        policy.RequireClaim("UploadVideo"));
+    options.AddPolicy("AddVideo", policy =>
+        policy.RequireClaim("AddVideo"));
+    options.AddPolicy("DeleteVideo", policy =>
+        policy.RequireClaim("DeleteVideo"));
+});
 
 builder.Services.AddApiAuthorization();
 builder.Services.AddMatBlazor();
