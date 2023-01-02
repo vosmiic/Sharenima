@@ -65,6 +65,8 @@ builder.Services.AddAuthorization(options => {
         policy.Requirements.Add(new UploadVideoRequirement(true)));
     options.AddPolicy("AddVideo", policy =>
         policy.Requirements.Add(new AddVideoRequirement(true)));
+    options.AddPolicy("DeleteVideo", policy =>
+        policy.Requirements.Add(new DeleteVideoRequirement(true)));
 });
 
 builder.Services.AddResponseCompression(opts => {
