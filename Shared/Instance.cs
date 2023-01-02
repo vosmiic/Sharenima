@@ -21,3 +21,7 @@ public class Instance : Base {
     public TimeSpan VideoTime { get; set; }
     public State? PlayerState { get; set; }
 }
+
+public class InstanceWithUserPermissions : Instance {
+    public List<Permissions.Permission> UserPermissions { get; set; }
+}
