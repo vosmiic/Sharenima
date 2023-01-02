@@ -13,6 +13,8 @@ public class Permissions {
         [Display(Name = "Add videos")]
         AddVideo,
         [Display(Name = "Upload videos")]
-        UploadVideo
+        UploadVideo,
+        [Display(Name = "Delete videos")]
+        DeleteVideo
     }
 }
