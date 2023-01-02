@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
+using Sharenima.Server.Helpers;
 using Sharenima.Server.Models;
+using Sharenima.Server.SignalR;
 using Sharenima.Shared;
 
 namespace Sharenima.Server.Controllers; 
@@ -12,12 +15,16 @@ namespace Sharenima.Server.Controllers;
 public class SettingsController : ControllerBase {
     private readonly IDbContextFactory<ApplicationDbContext> _applicationDbContextFactory;
     private readonly IDbContextFactory<GeneralDbContext> _generalDbCotextFactory;
+    private readonly IHubContext<QueueHub> _hubContext;
     private readonly ILogger<SettingsController> _logger;
+    private readonly ConnectionMapping _connectionMapping;
 
-    public SettingsController(IDbContextFactory<ApplicationDbContext> applicationDbContextFactory, IDbContextFactory<GeneralDbContext> generalDbCotextFactory, ILogger<SettingsController> logger) {
+    public SettingsController(IDbContextFactory<ApplicationDbContext> applicationDbContextFactory, IDbContextFactory<GeneralDbContext> generalDbCotextFactory, ILogger<SettingsController> logger, IHubContext<QueueHub> hubContext, ConnectionMapping connectionMapping) {
         _applicationDbContextFactory = applicationDbContextFactory;
         _generalDbCotextFactory = generalDbCotextFactory;
         _logger = logger;
+        _hubContext = hubContext;
+        _connectionMapping = connectionMapping;
     }
 
 
@@ -29,21 +36,8 @@ public class SettingsController : ControllerBase {
         Instance? instance = await generalContext.Instances.Where(instance => instance.Id == instanceId).Include(instance => instance.Permissions).FirstOrDefaultAsync();
         if (instance == null) return BadRequest("Instance could not be found");
         await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
-        List<ApplicationUser> users = context.Users.Include(au => au.Roles).ToList();
-        InstancePermissions instancePermissions = new InstancePermissions();
-        instancePermissions.UserPermissions = new List<UserPermissions>();
-        if (instance.Permissions.Any()) {
-            instancePermissions.LoggedInUsersPermissions = instance.Permissions.Where(instance => !instance.AnonymousUser).Select(instance => instance.Permissions).ToList();
-            instancePermissions.AnonymousUsersPermissions = instance.Permissions.Where(instance => instance.AnonymousUser).Select(instance => instance.Permissions).ToList();
-        }
-        foreach (ApplicationUser applicationUser in users) {
-            instancePermissions.UserPermissions.Add(new UserPermissions {
-                Username = applicationUser.UserName,
-                Permissions = applicationUser.Roles.Where(role => role.InstanceId == instance.Id).Select(item => item.Permission).ToList()
-            });
-        }
 
-        return Ok(instancePermissions);
+        return Ok(PermissionHelper.ListInstancePermissions(instance, context.Users.Include(au => au.Roles).ToList()));
     }
 
     [HttpPost]
@@ -53,6 +47,7 @@ public class SettingsController : ControllerBase {
         await using var generalContext = await _generalDbCotextFactory.CreateDbContextAsync();
         Instance? instance = await generalContext.Instances.Where(instance => instance.Id == instanceId).Include(instance => instance.Permissions).FirstOrDefaultAsync();
         if (instance == null) return BadRequest("Instance could not be found");
+        await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
 
         if (user == "instance") {
             foreach (PermissionOptions permissionOptions in userPermissionList) {
@@ -74,7 +69,6 @@ public class SettingsController : ControllerBase {
             _logger.LogInformation($"Saved instance {instance.Id} instance-level permissions");
             await generalContext.SaveChangesAsync();
         } else {
-            await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
             ApplicationUser? applicationUser = await context.Users.Where(applicationUser => applicationUser.UserName == user).Include(au => au.Roles).FirstOrDefaultAsync();
             if (applicationUser == null) return BadRequest("User could not be found");
 
@@ -96,6 +90,31 @@ public class SettingsController : ControllerBase {
 
             _logger.LogInformation($"Saved instance {instance.Id} user {applicationUser.Id} permissions");
             await context.SaveChangesAsync();
+        }
+
+        if (anonymousUser) {
+            KeyValuePair<Guid, List<ConnectionMapping.InstanceConnection>> instanceConnectionMappings = _connectionMapping.GetConnections().FirstOrDefault(item => item.Key == instanceId);
+            IEnumerable<ConnectionMapping.InstanceConnection> anonUsers = instanceConnectionMappings.Value.Where(item => item.UserId == null);
+            foreach (ConnectionMapping.InstanceConnection instanceConnection in anonUsers) {
+                foreach (PermissionOptions permissionOptions in userPermissionList) {
+                    await _hubContext.Clients.Client(instanceConnection.ConnectionId).SendAsync("PermissionUpdate", (Permissions.Permission)permissionOptions.PermissionEnum, permissionOptions.Ticked);
+                }
+            }
+        } else if (user == "instance") {
+            KeyValuePair<Guid, List<ConnectionMapping.InstanceConnection>> instanceConnectionMappings = _connectionMapping.GetConnections().FirstOrDefault(item => item.Key == instanceId);
+            IEnumerable<ConnectionMapping.InstanceConnection> authedUsers = instanceConnectionMappings.Value.Where(item => item.UserId != null);
+            foreach (ConnectionMapping.InstanceConnection instanceConnection in authedUsers) {
+                foreach (PermissionOptions permissionOptions in userPermissionList) {
+                    await _hubContext.Clients.Client(instanceConnection.ConnectionId).SendAsync("PermissionUpdate", (Permissions.Permission)permissionOptions.PermissionEnum, permissionOptions.Ticked);
+                }
+            }
+        } else {
+            KeyValuePair<Guid, List<ConnectionMapping.InstanceConnection>> instanceConnectionMappings = _connectionMapping.GetConnections().FirstOrDefault(item => item.Key == instanceId);
+            var selectedUser = instanceConnectionMappings.Value.FirstOrDefault(item => item.UserName == user);
+            if (selectedUser == null) return Ok();
+            foreach (PermissionOptions permissionOptions in userPermissionList) {
+                await _hubContext.Clients.Client(selectedUser.ConnectionId).SendAsync("PermissionUpdate", (Permissions.Permission)permissionOptions.PermissionEnum, permissionOptions.Ticked);
+            }
         }
         
         return Ok();

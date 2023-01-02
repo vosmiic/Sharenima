@@ -16,6 +16,7 @@ public partial class Queue : ComponentBase {
     [Inject] private NavigationManager _navigationManager { get; set; }
     [Inject] protected QueuePlayerService QueuePlayerService { get; set; }
     [Inject] protected RefreshService RefreshService { get; set; }
+    [Inject] private PermissionService PermissionService { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public EventCallback<ICollection<Sharenima.Shared.Queue>?> CurrentQueueChanged { get; set; }
     [Parameter] public Player? PlayerSibling { get; set; }
@@ -27,10 +28,13 @@ public partial class Queue : ComponentBase {
 
     protected override async Task OnInitializedAsync() {
         var authState = await authenticationStateTask;
+        
         if (authState.User.Identity is { IsAuthenticated: true }) {
             _authHttpClient = HttpClientFactory.CreateClient("auth");
-            Authenticated = true;
         }
+        PermissionCheck();
+        PermissionService.PermissionsUpdated += PermissionCheck;
+
 
         _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
         await GetQueue();
@@ -100,6 +104,11 @@ public partial class Queue : ComponentBase {
                 RefreshService.CallInstanceIndexRefresh();
             }
         }
+    }
+
+    private void PermissionCheck() {
+        Authenticated = PermissionService.CheckIfUserHasPermission(Permissions.Permission.DeleteVideo);
+        StateHasChanged();
     }
 
     private async Task Hub() {
