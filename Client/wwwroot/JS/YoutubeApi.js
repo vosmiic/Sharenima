@@ -58,10 +58,10 @@ function youtubeOnReady(event) {
 
 let lastUpdateTime = null;
 setInterval(function () {
-    if (typeof YT !== 'undefined' && player !== 'undefined') {
+    if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
         var currentTime = getCurrentTime();
         if (currentTime && player.getPlayerState() !== 0) {
-            dotNetHelper.invokeMethodAsync('ProgressChange', currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2);
+            dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2);
             lastUpdateTime = currentTime;
         }
     }
@@ -70,6 +70,13 @@ setInterval(function () {
 //functions
 function playYT() {
     player.playVideo();
+    setTimeout(() => {
+        if (player.getPlayerState() === -1) {
+            // user must have not interacted with the site yet, got to mute and then play again
+            player.mute();
+            player.playVideo();
+        }
+    }, 500);
 }
 
 function pauseYT() {
@@ -103,7 +110,5 @@ function youtubeStateChange(event) {
 }
 
 function youtubeDestroy() {
-    if (player) {
-        player.destroy();
-    }
+    document.getElementById("youtubeContainer").textContent = '';
 }

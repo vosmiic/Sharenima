@@ -11,7 +11,7 @@ let videoId;
 
 function loadVideoFunctions(autoplay, currentVideoId) {
     video = document.querySelector('#mediaPlayer');
-    this.videoId = currentVideoId;
+    videoId = currentVideoId;
 
     video.addEventListener('play', function () {
         videoPlaying = true;
@@ -88,11 +88,15 @@ function setCurrentUploadedVideoTime(time, currentVideoId) {
     return false;
 }
 
+function destroyVideoElement() {
+    document.getElementById("fileUploadContainer").textContent = '';
+}
+
 setInterval(function () {
-    if (typeof video !== 'undefined' && video !== 'undefined' && !video.ended) {
+    if (typeof video !== 'undefined' && video !== 'undefined' && !video.ended && typeof videoId === 'string') {
         var currentTime = video.currentTime;
         if (currentTime) {
-            dotNetHelper.invokeMethodAsync('ProgressChange', currentTime, false);
+            dotNetHelper.invokeMethodAsync('ProgressChange', videoId, currentTime, false);
         }
     }
 }, 500)

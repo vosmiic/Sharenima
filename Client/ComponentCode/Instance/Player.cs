@@ -29,8 +29,8 @@ public partial class Player : ComponentBase {
     }
 
     [JSInvokable]
-    public async void ProgressChange(double newTime, bool seeked) {
-        if (playerState != State.Ended) {
+    public async void ProgressChange(Guid videoId, double newTime, bool seeked) {
+        if (playerState != State.Ended && videoId == Video?.Id) {
             if (_initialVideoLoad) {
                 if (await SendProgressChange(VideoTime.TotalSeconds, Video?.Id))
                     _initialVideoLoad = false;
@@ -39,12 +39,9 @@ public partial class Player : ComponentBase {
             TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
             var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
             if (difference is > 300 or < -300) {
-                Console.WriteLine("Sending progress change");
-                HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime, seeked);
+                HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime, seeked, Video?.Id);
                 VideoTime = newVideoTime;
             }
-        } else {
-            Console.WriteLine("Video has ended; not updating db");
         }
     }
 
@@ -79,15 +76,18 @@ public partial class Player : ComponentBase {
         await Hub();
     }
 
-    private void NewVideo() {
+    private Task NewVideo(CancellationToken cancellationToken) {
         Video = QueuePlayerService.CurrentQueue.FirstOrDefault();
         InitialState = State.Playing;
         StateHasChanged();
+        return Task.CompletedTask;
     }
 
-    private async void EndVideo() {
+    private async Task EndVideo(CancellationToken cancellationToken) {
         if (Video?.VideoType == VideoType.YouTube) {
             await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
+        } else if (Video?.VideoType == VideoType.FileUpload) {
+            await _jsRuntime.InvokeVoidAsync("destroyVideoElement");
         }
         VideoTime = TimeSpan.Zero;
     }
@@ -96,6 +96,8 @@ public partial class Player : ComponentBase {
         if (Video != null) {
             switch (Video?.VideoType) {
                 case VideoType.YouTube:
+                    Console.WriteLine(Video.Id);
+                    Console.WriteLine(RequestVideo());
                     await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo(), InitialState is State.Playing, Video.Id);
                     break;
                 case VideoType.FileUpload:
