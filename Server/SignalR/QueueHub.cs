@@ -75,14 +75,15 @@ public class QueueHub : Hub {
     }
 
     [Authorize(Policy = "ChangeProgress")]
-    public async Task SendProgressChange(string groupName, TimeSpan videoTime, bool seeked) {
+    public async Task SendProgressChange(string groupName, TimeSpan videoTime, bool seeked, Guid? videoId) {
         if (seeked ||
             (!_memoryCache.TryGetValue($"lastUpdate-{groupName}", out DateTime lastUpdate) &&
             DateTime.UtcNow > lastUpdate.AddMilliseconds(300))) {
             _memoryCache.Set($"lastUpdate-{groupName}", DateTime.UtcNow, TimeSpan.FromSeconds(2));
             await using var context = await _contextFactory.CreateDbContextAsync();
+            if (videoId == null || context.Queues.FirstOrDefault(queue => queue.Id == videoId) == null) return;
             Guid parsedGroupName;
-            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => Guid.TryParse(groupName, out parsedGroupName) && instance.Id == parsedGroupName);
+            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => Guid.TryParse(groupName, out parsedGroupName) && instance.Id == parsedGroupName && instance.PlayerState != State.Ended);
             if (instance == null) return;
             instance.VideoTime = videoTime;
             await context.SaveChangesAsync();
