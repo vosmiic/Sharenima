@@ -4,6 +4,7 @@ using MatBlazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.JSInterop;
 using Sharenima.Client.Helpers;
 using Sharenima.Shared;
 
@@ -18,6 +19,7 @@ public partial class Instance : ComponentBase {
     [Inject] protected QueuePlayerService QueuePlayerService { get; set; }
     [Inject] protected RefreshService RefreshService { get; set; }
     [Inject] private PermissionService PermissionService { get; set; }
+    [Inject] private IJSRuntime _jsRuntime { get; set; }
     [Parameter] public string InstanceId { get; set; }
     protected HubConnection? _hubConnection;
     protected Sharenima.Shared.Instance? SelectedInstance { get; set; }
@@ -26,7 +28,7 @@ public partial class Instance : ComponentBase {
 
 
     protected override async Task OnInitializedAsync() {
-        RefreshService.InstanceIndexRefreshRequested += StateHasChanged;
+        RefreshService.InstanceIndexRefreshRequested += StateChanged;
 
         _httpClient = HttpClientFactory.CreateClient("anonymous");
         HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"Instance?instanceName={InstanceId}&includePermissions=true");
@@ -75,4 +77,9 @@ public partial class Instance : ComponentBase {
 
     protected void SettingsButtonClicked() =>
         settingsIsOpen = true;
+
+    private Task StateChanged(CancellationToken cancellationToken) {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 }

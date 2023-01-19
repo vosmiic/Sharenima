@@ -1,19 +1,38 @@
+using AsyncEventHandlers;
+
 namespace Sharenima.Client;
 
 public class RefreshService {
-    public event Action InstanceIndexRefreshRequested;
-    public event Action PlayerRefreshRequested;
-    public event Action PlayerVideoEnded;
-
-    public void CallInstanceIndexRefresh() {
-        InstanceIndexRefreshRequested?.Invoke();
+    private readonly AsyncEventHandler instanceIndexRefreshRequested = new();
+    public event AsyncEvent InstanceIndexRefreshRequested
+    {
+        add { instanceIndexRefreshRequested.Register(value); }
+        remove { instanceIndexRefreshRequested.Unregister(value); }
+    }
+    
+    private readonly AsyncEventHandler playerRefreshRequested = new();
+    public event AsyncEvent PlayerRefreshRequested
+    {
+        add { playerRefreshRequested.Register(value); }
+        remove { playerRefreshRequested.Unregister(value); }
+    }
+    
+    private readonly AsyncEventHandler playerVideoEnded = new();
+    public event AsyncEvent PlayerVideoEnded
+    {
+        add { playerVideoEnded.Register(value); }
+        remove { playerVideoEnded.Unregister(value); }
     }
 
-    public void CallPlayerRefreshRequested() {
-        PlayerRefreshRequested?.Invoke();
+    public async Task CallInstanceIndexRefresh() {
+        await instanceIndexRefreshRequested.InvokeAsync();
     }
 
-    public void CallPlayerVideoEnded() {
-        PlayerVideoEnded?.Invoke();
+    public async Task CallPlayerRefreshRequested() {
+        await playerRefreshRequested.InvokeAsync();
+    }
+
+    public async Task CallPlayerVideoEnded() {
+        await playerVideoEnded.InvokeAsync();
     }
 }
