@@ -56,7 +56,7 @@ function uploadedVideoStateChange(state) {
 }
 
 function updateBackendProgress() {
-    dotNetHelper.invokeMethodAsync('ProgressChange', video.currentTime, true);
+    dotNetHelper.invokeMethodAsync('ProgressChange', videoId, video.currentTime, true);
     lastExecution = new Date();
 }
 
