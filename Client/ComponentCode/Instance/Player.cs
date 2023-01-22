@@ -10,6 +10,7 @@ public partial class Player : ComponentBase {
     [Inject] private IJSRuntime _jsRuntime { get; set; }
     [Inject] private QueuePlayerService QueuePlayerService { get; set; }
     [Inject] protected RefreshService RefreshService { get; set; }
+    [Inject] private PermissionService PermissionService { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public State? InitialState { get; set; }
@@ -21,7 +22,7 @@ public partial class Player : ComponentBase {
 
     [JSInvokable]
     public void StateChange(int value) {
-        if (value is > -1 and < 3) {
+        if (value is > -1 and < 3 && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
             playerState = (State)value;
             Console.WriteLine($"State changed: {playerState}");
             HubConnection.SendAsync("SendStateChange", InstanceId, playerState, Video.Id);
@@ -30,7 +31,7 @@ public partial class Player : ComponentBase {
 
     [JSInvokable]
     public async void ProgressChange(Guid videoId, double newTime, bool seeked) {
-        if (playerState != State.Ended && videoId == Video?.Id) {
+        if (playerState != State.Ended && videoId == Video?.Id && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
             if (_initialVideoLoad) {
                 if (await SendProgressChange(VideoTime.TotalSeconds, Video?.Id))
                     _initialVideoLoad = false;
