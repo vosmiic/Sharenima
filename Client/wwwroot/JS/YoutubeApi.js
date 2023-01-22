@@ -56,13 +56,17 @@ function youtubeOnReady(event) {
     }
 }
 
+let initialLoad = true;
 let lastUpdateTime = null;
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
         var currentTime = getCurrentTime();
         if (currentTime && player.getPlayerState() !== 0) {
-            dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2);
-            lastUpdateTime = currentTime;
+            if (!initialLoad) {
+                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2);
+                lastUpdateTime = currentTime;
+            }
+            initialLoad = false;
         }
     }
 }, 500)
