@@ -86,7 +86,7 @@ public partial class Queue : ComponentBase {
         if (!removeVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not remove video; {removeVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
         } else {
-            if (QueuePlayerService.CurrentQueue.FirstOrDefault()?.Id == queueId) {
+            if (QueuePlayerService.CurrentQueue.FirstOrDefault() == null || QueuePlayerService.CurrentQueue.FirstOrDefault()?.Id == queueId) {
                 await RefreshService.CallPlayerVideoEnded();
                 await RefreshService.CallPlayerRefreshRequested();
             }
