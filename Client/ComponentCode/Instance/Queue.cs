@@ -85,6 +85,11 @@ public partial class Queue : ComponentBase {
 
         if (!removeVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not remove video; {removeVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
+        } else {
+            if (QueuePlayerService.CurrentQueue.FirstOrDefault()?.Id == queueId) {
+                await RefreshService.CallPlayerVideoEnded();
+                await RefreshService.CallPlayerRefreshRequested();
+            }
         }
     }
 
@@ -100,8 +105,8 @@ public partial class Queue : ComponentBase {
             await CurrentQueueChanged.InvokeAsync(queueCollection);
             QueuePlayerService.SetQueue(queueCollection.ToList());
             if (queueCollection.Count > 0) {
-                RefreshService.CallPlayerRefreshRequested();
-                RefreshService.CallInstanceIndexRefresh();
+                await RefreshService.CallPlayerRefreshRequested();
+                await RefreshService.CallInstanceIndexRefresh();
             }
         }
     }
