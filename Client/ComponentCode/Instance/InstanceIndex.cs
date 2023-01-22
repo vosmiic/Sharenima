@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using MatBlazor;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
@@ -11,6 +12,7 @@ using Sharenima.Shared;
 namespace Sharenima.Client.ComponentCode;
 
 public partial class Instance : ComponentBase {
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
     protected bool isLoaded { get; set; }
     [Inject] private IHttpClientFactory HttpClientFactory { get; set; }
     [Inject] private NavigationManager _navigationManager { get; set; }
@@ -24,14 +26,21 @@ public partial class Instance : ComponentBase {
     protected HubConnection? _hubConnection;
     protected Sharenima.Shared.Instance? SelectedInstance { get; set; }
     protected bool settingsIsOpen = false;
-    private HttpClient _httpClient { get; set; }
+    private HttpClient? _authHttpClient { get; set; }
+    private HttpClient _anonymousHttpClient { get; set; }
 
 
     protected override async Task OnInitializedAsync() {
         RefreshService.InstanceIndexRefreshRequested += StateChanged;
+        var authState = await authenticationStateTask;
+        
+        if (authState.User.Identity is { IsAuthenticated: true }) {
+            _authHttpClient = HttpClientFactory.CreateClient("auth");
+        }
 
-        _httpClient = HttpClientFactory.CreateClient("anonymous");
-        HttpResponseMessage httpResponseMessage = await _httpClient.GetAsync($"Instance?instanceName={InstanceId}&includePermissions=true");
+
+        _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
+        HttpResponseMessage httpResponseMessage = await HttpClient().GetAsync($"Instance?instanceName={InstanceId}&includePermissions=true");
 
         if (!httpResponseMessage.IsSuccessStatusCode) {
             if (httpResponseMessage.StatusCode == HttpStatusCode.NotFound) {
@@ -81,5 +90,11 @@ public partial class Instance : ComponentBase {
     private Task StateChanged(CancellationToken cancellationToken) {
         StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    private HttpClient HttpClient() {
+        if (_authHttpClient == null)
+            return _anonymousHttpClient;
+        return _authHttpClient;
     }
 }
