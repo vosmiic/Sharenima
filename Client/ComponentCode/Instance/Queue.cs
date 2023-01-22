@@ -129,13 +129,12 @@ public partial class Queue : ComponentBase {
             }
         });
 
-        HubConnection.On<State>("ReceiveStateChange", (state) => {
+        HubConnection.On<State>("ReceiveStateChange", async (state) => {
             if (state == State.Ended) {
                 // remove current video since it has been completed
-                Console.WriteLine("Video has ended");
+                await RefreshService.CallPlayerVideoEnded();
                 QueuePlayerService.RemoveFromQueue(QueuePlayerService.CurrentQueue.First());
-                RefreshService.CallPlayerVideoEnded();
-                RefreshService.CallPlayerRefreshRequested();
+                await RefreshService.CallPlayerRefreshRequested();
                 StateHasChanged();
             }
         });
