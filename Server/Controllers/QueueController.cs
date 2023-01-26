@@ -51,7 +51,8 @@ public class QueueController : ControllerBase {
             Name = youtubeVideoInfo.Title,
             Url = videoUrl,
             Thumbnail = youtubeVideoInfo.ThumbnailUrl,
-            VideoType = VideoType.YouTube
+            VideoType = VideoType.YouTube,
+            Order = context.Queues.Count(queue => queue.InstanceId == instanceId)
         };
 
         instance.VideoQueue.Add(queue);
@@ -89,7 +90,8 @@ public class QueueController : ControllerBase {
             InstanceId = instance.Id,
             Name = fileData.fileName,
             VideoType = VideoType.FileUpload,
-            MediaType = fileData.MediaType
+            MediaType = fileData.MediaType,
+            Order = context.Queues.Count(queue => queue.InstanceId == instanceId)
         };
 
         int lastIndexOfExtension = fileData.fileName.LastIndexOf(".", StringComparison.CurrentCulture);
@@ -169,4 +171,23 @@ public class QueueController : ControllerBase {
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("RemoveVideo", queue.Id);
         return Ok();
     }
+
+    [HttpPost]
+    [Route("order")]
+    public async Task<ActionResult> ChangeInstanceQueuesOrder(Guid instanceId, [FromBody] List<Queue> queueList) {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var dbQueueList = context.Queues.Where(queue => queue.InstanceId == instanceId);
+        foreach (Queue queue in dbQueueList) {
+            Queue? receivedQueue = queueList.FirstOrDefault(item => item.Id == queue.Id);
+            if (receivedQueue != null && queueList.IndexOf(receivedQueue) != queue.Order) {
+                if (queue.Order == 0) return Forbid();
+                queue.Order = queueList.IndexOf(receivedQueue);
+            }
+        }
+
+        await context.SaveChangesAsync();
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("QueueOrderChange", dbQueueList.ToList());
+        return Ok();
+    }
+    
 }
