@@ -4,14 +4,12 @@
 @if (Video != null) {
     switch (Video.VideoType) {
         case VideoType.YouTube:
-            <div id="youtubeContainer">
-                <h1>youtube</h1>
+            <div id="youtubeContainer" class="playerContainer">
                 <div id="player"></div>
             </div>
             break;
         case VideoType.FileUpload:
-            <div id="fileUploadContainer">
-                <h1>file upload</h1>
+            <div id="fileUploadContainer" class="playerContainer">
                 <video id="mediaPlayer" controls>
                     <source src="@Video.Url" type="@Video.MediaType"/>
                 </video>
