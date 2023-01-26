@@ -165,6 +165,9 @@ public class QueueController : ControllerBase {
         await using var context = await _contextFactory.CreateDbContextAsync();
         Queue? queue = await context.Queues.FirstOrDefaultAsync(queue => queue.Id == queueId);
         if (queue == null) return NotFound("Queue does not exist");
+        foreach (Queue existingQueue in context.Queues.Where(dbQueue => dbQueue.InstanceId == instanceId && dbQueue.Order > queue.Order)) {
+            existingQueue.Order--;
+        }
         context.Remove(queue);
         await context.SaveChangesAsync();
         _logger.LogInformation($"Video {queue.Name} removed from instance queue");
