@@ -2,6 +2,7 @@ using MatBlazor;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Plk.Blazor.DragDrop;
 using Sharenima.Client;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -42,5 +43,6 @@ builder.Services.AddMatToaster(config => {
     config.MaximumOpacity = 95;
     config.VisibleStateDuration = 3000;
 });
+builder.Services.AddBlazorDragDrop();
 
 await builder.Build().RunAsync();

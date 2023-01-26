@@ -25,6 +25,8 @@ public partial class Queue : ComponentBase {
     private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
     protected bool Authenticated { get; set; }
+    protected List<Sharenima.Shared.Queue> QueueList { get; set; } = new List<Sharenima.Shared.Queue>();
+    private List<Sharenima.Shared.Queue> QueueListOriginal { get; set; } = new List<Sharenima.Shared.Queue>();
 
     protected override async Task OnInitializedAsync() {
         var authState = await authenticationStateTask;
@@ -41,6 +43,8 @@ public partial class Queue : ComponentBase {
 
         await Hub();
     }
+
+    protected override void OnParametersSet() => SetList();
 
     protected async void AddVideoToQueue() {
         if (_authHttpClient == null) return;
@@ -115,6 +119,19 @@ public partial class Queue : ComponentBase {
         Authenticated = PermissionService.CheckIfUserHasPermission(Permissions.Permission.DeleteVideo);
         StateHasChanged();
     }
+    
+    protected async void OnDrop() {
+        if (_authHttpClient == null) return;
+
+        var changeQueuePositionResponse = await _authHttpClient.PostAsync($"queue/order?instanceId={InstanceId}", JsonConverters.ConvertObjectToHttpContent(QueueList));
+        if (changeQueuePositionResponse.IsSuccessStatusCode) {
+            QueueListOriginal = QueueList;
+        } else {
+            _toaster.Add("Could not change queue order", MatToastType.Danger, "Error");
+            QueueList = QueueListOriginal.OrderBy(queue => queue.Order).ToList();
+            StateHasChanged();
+        }
+    }
 
     private async Task Hub() {
         await HubConnection.SendAsync("JoinGroup", InstanceId.ToString());
@@ -126,7 +143,7 @@ public partial class Queue : ComponentBase {
                 RefreshService.CallPlayerRefreshRequested();
         });
 
-        HubConnection.On<Guid>("RemoveVideo", async (queueId) => {
+        HubConnection.On<Guid>("RemoveVideo", (queueId) => {
             Sharenima.Shared.Queue? queue = QueuePlayerService.CurrentQueue?.FirstOrDefault(queue => queue.Id == queueId);
             if (queue != null) {
                 QueuePlayerService.RemoveFromQueue(queue);
@@ -140,8 +157,21 @@ public partial class Queue : ComponentBase {
                 await RefreshService.CallPlayerVideoEnded();
                 QueuePlayerService.RemoveFromQueue(QueuePlayerService.CurrentQueue.First());
                 await RefreshService.CallPlayerRefreshRequested();
+                SetList();
                 StateHasChanged();
             }
         });
+
+        HubConnection.On<List<Sharenima.Shared.Queue>>("QueueOrderChange", (queueList) => {
+            QueueList = queueList.OrderBy(queue => queue.Order).ToList();
+            QueuePlayerService.SetQueue(QueueList);
+            QueuePlayerService.CurrentQueue.OrderBy(queue => queue.Order).ToList().ForEach(queue => Console.WriteLine(queue.Name));
+            StateHasChanged();
+        });
+    }
+
+    private void SetList() {
+        QueueList = QueuePlayerService.CurrentQueue.OrderBy(queue => queue.Order).ToList();
+        QueueListOriginal = QueueList;
     }
 }

@@ -4,25 +4,25 @@
 <MatList>
     <MatListItem>
         <MatTextField TValue="string" @bind-Value="VideoUrl" Label="Video URL"/>
-        <MatIconButton Icon="add_to_queue" OnClick="AddVideoToQueue" />
+        <MatIconButton Icon="add_to_queue" OnClick="AddVideoToQueue"/>
         <MatFileUpload OnChange="UploadVideoToQueue" Label="Drag and drop here or click to browse"></MatFileUpload>
     </MatListItem>
-    <MatListDivider />
-    @if (QueuePlayerService.CurrentQueue.Count == 0) {
-        <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
+    <MatListDivider/>
+    @if (QueueList?.Count == 0) {
+        <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
     } else {
-        foreach (Sharenima.Shared.Queue queue in QueuePlayerService.CurrentQueue) {
-            <MatListItem @key="queue.Id" Style="height: unset">
+        <Dropzone Items="QueueList" TItem="Sharenima.Shared.Queue" OnItemDrop="OnDrop" Accepts="(dragged, target) => dragged?.Order != 0 && target?.Order != 0">
+            <MatListItem @key="@context.Id" Style="height: unset">
                 <MatCard>
                     <MatCardContent>
-                        <MatCardMedia Wide="true" ImageUrl="@queue.Thumbnail"/>
-                        <MatBody1>@queue.Name</MatBody1>
+                        <MatCardMedia Wide="true" ImageUrl="@context.Thumbnail"/>
+                        <MatBody1>@context.Name</MatBody1>
                     </MatCardContent>
                     <MatCardActions>
-                        <MatButton OnClick="() => RemoveFromVideoQueue(queue.Id)" Disabled="!Authenticated">Remove</MatButton>
+                        <MatButton OnClick="() => RemoveFromVideoQueue(context.Id)" Disabled="!Authenticated">Remove</MatButton>
                     </MatCardActions>
                 </MatCard>
             </MatListItem>
-        }
+        </Dropzone>
     }
 </MatList>
