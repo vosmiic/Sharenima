@@ -3,7 +3,7 @@
 @using Sharenima.Client.Pages.Instance.SettingsPages
 
 @if (SelectedInstance == null) {
-    <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
+    <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
 } else {
     <MatAppBarContainer>
         <MatAppBar Fixed="true">
@@ -14,28 +14,30 @@
                 </MatAppBarSection>
             </MatAppBarRow>
         </MatAppBar>
-    
-        <div class="mat-layout-grid">
-            <div class="mat-layout-grid-inner">
-                <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2" style="background-color: blue">
-                    <Queue InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection"></Queue>
-                </div>
-                <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8" style="background-color: red">
-                    @if (QueuePlayerService.CurrentQueue.FirstOrDefault() != null) {
-                        <Player InstanceId="@SelectedInstance.Id" InitialState="@SelectedInstance.PlayerState" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime"></Player>
-                    }
-                </div>
-                <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2" style="background-color: purple">
-                    <Chat InstanceId="SelectedInstance.Id" HubConnection="@_hubConnection"></Chat>
+
+        <MatAppBarContent>
+            <div class="mat-layout-grid p-0">
+                <div class="mat-layout-grid-inner">
+                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2" style="background-color: blue">
+                        <Queue InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection"></Queue>
+                    </div>
+                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8" style="background-color: red">
+                        @if (QueuePlayerService.CurrentQueue.FirstOrDefault() != null) {
+                            <Player InstanceId="@SelectedInstance.Id" InitialState="@SelectedInstance.PlayerState" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime"></Player>
+                        }
+                    </div>
+                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2" style="background-color: purple">
+                        <Chat InstanceId="SelectedInstance.Id" HubConnection="@_hubConnection"></Chat>
+                    </div>
                 </div>
             </div>
-        </div>
+        </MatAppBarContent>
     </MatAppBarContainer>
-    
+
     <MatDialog @bind-IsOpen="@settingsIsOpen">
         <MatDialogTitle>Instance Settings</MatDialogTitle>
         <MatDialogContent>
-            <SettingsIndex InstanceId="@SelectedInstance.Id" />
+            <SettingsIndex InstanceId="@SelectedInstance.Id"/>
         </MatDialogContent>
     </MatDialog>
 }
