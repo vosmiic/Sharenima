@@ -22,22 +22,24 @@
         </ChildContent>
     </MatTab>
 </MatTabGroup>
-<MatList>
+<div class="container">
     @if (QueueList?.Count == 0) {
         <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
     } else {
-        <Dropzone Items="QueueList" TItem="Sharenima.Shared.Queue" OnItemDrop="OnDrop" Accepts="(dragged, target) => dragged?.Order != 0 && target?.Order != 0">
-            <MatListItem @key="@context.Id" Style="height: unset">
-                <MatCard>
-                    <MatCardContent>
-                        <MatCardMedia Wide="true" ImageUrl="@context.Thumbnail"/>
-                        <MatBody1>@context.Name</MatBody1>
-                    </MatCardContent>
-                    <MatCardActions>
-                        <MatButton OnClick="() => RemoveFromVideoQueue(context.Id)" Disabled="!Authenticated">Remove</MatButton>
-                    </MatCardActions>
-                </MatCard>
-            </MatListItem>
-        </Dropzone>
+        <div class="row row-cols-1">
+            <Dropzone Items="QueueList" TItem="Sharenima.Shared.Queue" OnItemDrop="OnDrop" Accepts="(dragged, target) => dragged?.Order != 0 && target?.Order != 0">
+                <div class="col" @key="@context.Id">
+                    <MatCard>
+                        <MatCardContent>
+                            <MatCardMedia Wide="true" ImageUrl="@context.Thumbnail"/>
+                            <MatBody1>@context.Name</MatBody1>
+                        </MatCardContent>
+                        <MatCardActions>
+                            <MatButton OnClick="() => RemoveFromVideoQueue(context.Id)" Disabled="!Authenticated">Remove</MatButton>
+                        </MatCardActions>
+                    </MatCard>
+                </div>
+            </Dropzone>
+        </div>
     }
-</MatList>
+</div>
