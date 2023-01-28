@@ -138,27 +138,29 @@ public partial class Queue : ComponentBase {
 
         HubConnection.On<Sharenima.Shared.Queue>("AnnounceVideo", async (queue) => {
             QueuePlayerService.AddToQueue(queue);
+            SetList();
             StateHasChanged();
             if (QueuePlayerService.CurrentQueue.Count == 1)
                 RefreshService.CallPlayerRefreshRequested();
         });
 
-        HubConnection.On<Guid>("RemoveVideo", (queueId) => {
+        HubConnection.On<Guid>("RemoveVideo", async (queueId) => {
             Sharenima.Shared.Queue? queue = QueuePlayerService.CurrentQueue?.FirstOrDefault(queue => queue.Id == queueId);
             if (queue != null) {
-                QueuePlayerService.RemoveFromQueue(queue);
-                StateHasChanged();
+                if (queue.Order == 0) {
+                    await RunNextVideo(queue);
+                } else {
+                    QueuePlayerService.RemoveFromQueue(queue);
+                    SetList();
+                    StateHasChanged();
+                }
             }
         });
 
         HubConnection.On<State>("ReceiveStateChange", async (state) => {
             if (state == State.Ended) {
                 // remove current video since it has been completed
-                await RefreshService.CallPlayerVideoEnded();
-                QueuePlayerService.RemoveFromQueue(QueuePlayerService.CurrentQueue.First());
-                await RefreshService.CallPlayerRefreshRequested();
-                SetList();
-                StateHasChanged();
+                await RunNextVideo(QueuePlayerService.CurrentQueue.First());
             }
         });
 
@@ -173,5 +175,13 @@ public partial class Queue : ComponentBase {
     private void SetList() {
         QueueList = QueuePlayerService.CurrentQueue.OrderBy(queue => queue.Order).ToList();
         QueueListOriginal = QueueList;
+    }
+
+    private async Task RunNextVideo(Sharenima.Shared.Queue queue) {
+        await RefreshService.CallPlayerVideoEnded();
+        QueuePlayerService.RemoveFromQueue(queue);
+        await RefreshService.CallPlayerRefreshRequested();
+        SetList();
+        StateHasChanged();
     }
 }
