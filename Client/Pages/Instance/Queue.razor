@@ -1,13 +1,28 @@
 @page "/Queue"
 @inherits Sharenima.Client.ComponentCode.Queue
 
+<MatTabGroup>
+    <MatTab>
+        <LabelContent>
+            URL <MatIcon Icon="@MatIconNames.Insert_link"></MatIcon>
+        </LabelContent>
+        <ChildContent>
+            <div class="d-flex">
+                <MatTextField TValue="string" @bind-Value="VideoUrl" Label="Video URL" Style="width: 100%"/>
+                <MatIconButton Icon="add_to_queue" OnClick="AddVideoToQueue"/>
+            </div>
+        </ChildContent>
+    </MatTab>
+    <MatTab>
+        <LabelContent>
+            Upload <MatIcon Icon="@MatIconNames.Attach_file"></MatIcon>
+        </LabelContent>
+        <ChildContent>
+            <MatFileUpload OnChange="UploadVideoToQueue" Label="Drag and drop a video here or click here to select a local file"></MatFileUpload>
+        </ChildContent>
+    </MatTab>
+</MatTabGroup>
 <MatList>
-    <MatListItem>
-        <MatTextField TValue="string" @bind-Value="VideoUrl" Label="Video URL"/>
-        <MatIconButton Icon="add_to_queue" OnClick="AddVideoToQueue"/>
-        <MatFileUpload OnChange="UploadVideoToQueue" Label="Drag and drop here or click to browse"></MatFileUpload>
-    </MatListItem>
-    <MatListDivider/>
     @if (QueueList?.Count == 0) {
         <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
     } else {
