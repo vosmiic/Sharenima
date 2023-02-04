@@ -34,7 +34,11 @@ function onYouTubeIframeAPIReady() {
         width: '640',
         videoId: initialVideoId,
         playerVars: {
-            'playsinline': 1
+            'playsinline': 1,
+            'autohide': 1,
+            'controls': 1,
+            'iv_load_policy': 3,
+            'rel': 0
         },
         events: {
             'onReady': youtubeOnReady,
@@ -105,7 +109,7 @@ function setCurrentYoutubeVideoTime(time, currentVideoId) {
     return false;
 }
 
-function loadVideo(videoId) {
+function changeYTVideoSource(videoId) {
     player.loadVideoById(videoId);
 }
 

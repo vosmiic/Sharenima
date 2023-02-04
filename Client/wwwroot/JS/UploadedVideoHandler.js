@@ -92,6 +92,14 @@ function destroyVideoElement() {
     document.getElementById("fileUploadContainer").textContent = '';
 }
 
+function changeUploadedVideoSource(newSource, autoPlay) {
+    video.pause();
+    video.src = newSource;
+    if (autoPlay) {
+        video.play();
+    }
+}
+
 setInterval(function () {
     if (typeof video !== 'undefined' && video !== 'undefined' && !video.ended && typeof videoId === 'string') {
         var currentTime = video.currentTime;
