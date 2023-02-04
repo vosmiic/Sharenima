@@ -18,15 +18,15 @@
         <MatAppBarContent>
             <div class="mat-layout-grid p-0">
                 <div class="mat-layout-grid-inner">
-                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2" style="background-color: blue">
+                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2">
                         <Queue InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection"></Queue>
                     </div>
-                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8" style="background-color: red">
+                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8">
                         @if (QueuePlayerService.CurrentQueue.FirstOrDefault() != null) {
                             <Player InstanceId="@SelectedInstance.Id" InitialState="@SelectedInstance.PlayerState" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime"></Player>
                         }
                     </div>
-                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2" style="background-color: purple">
+                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2">
                         <Chat InstanceId="SelectedInstance.Id" HubConnection="@_hubConnection"></Chat>
                     </div>
                 </div>
