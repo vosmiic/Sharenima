@@ -77,19 +77,31 @@ public partial class Player : ComponentBase {
         await Hub();
     }
 
-    private Task NewVideo(CancellationToken cancellationToken) {
+    private async Task NewVideo(CancellationToken cancellationToken) {
+        VideoType? oldVideoType = Video?.VideoType;
         Video = QueuePlayerService.CurrentQueue.FirstOrDefault();
-        InitialState = State.Playing;
+        InitialState = playerState is State.Ended or State.Playing ? State.Playing : State.Paused;
+        if (oldVideoType != null && oldVideoType == Video?.VideoType) {
+            if (Video?.VideoType == VideoType.YouTube)
+                await _jsRuntime.InvokeVoidAsync("changeYTVideoSource", RequestVideo());
+            if (Video?.VideoType == VideoType.FileUpload)
+                await _jsRuntime.InvokeVoidAsync("changeUploadedVideoSource", Video.Url, playerState is State.Ended or State.Playing);
+        } else {
+            StateHasChanged();
+        }
+
         StateHasChanged();
-        return Task.CompletedTask;
     }
 
     private async Task EndVideo(CancellationToken cancellationToken) {
-        if (Video?.VideoType == VideoType.YouTube) {
+        if (Video?.VideoType == VideoType.YouTube &&
+            QueuePlayerService.CurrentQueue.FirstOrDefault(queue => queue.Order == Video?.Order + 1)?.VideoType != VideoType.YouTube) {
             await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
-        } else if (Video?.VideoType == VideoType.FileUpload) {
+        } else if (Video?.VideoType == VideoType.FileUpload &&
+                   QueuePlayerService.CurrentQueue.FirstOrDefault(queue => queue.Order == Video?.Order + 1)?.VideoType != VideoType.FileUpload) {
             await _jsRuntime.InvokeVoidAsync("destroyVideoElement");
         }
+
         VideoTime = TimeSpan.Zero;
     }
 
@@ -97,8 +109,6 @@ public partial class Player : ComponentBase {
         if (Video != null) {
             switch (Video?.VideoType) {
                 case VideoType.YouTube:
-                    Console.WriteLine(Video.Id);
-                    Console.WriteLine(RequestVideo());
                     await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo(), InitialState is State.Playing, Video.Id);
                     break;
                 case VideoType.FileUpload:
