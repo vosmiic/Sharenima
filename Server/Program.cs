@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -37,6 +38,11 @@ builder.Services.TryAddEnumerable(
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
+builder.Services.Configure<FormOptions>(x =>
+{
+    x.ValueCountLimit = int.MaxValue;
+});
+
 
 builder.Logging.ClearProviders();
 builder.Logging.AddProvider(new ConsoleLoggerProvider(new ConsoleLoggerConfiguration {

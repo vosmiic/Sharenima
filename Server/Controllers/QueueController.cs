@@ -58,7 +58,7 @@ public class QueueController : ControllerBase {
         instance.VideoQueue.Add(queue);
 
         await context.SaveChangesAsync();
-        
+
         _logger.LogInformation($"Video {queue.Name} added to instance {instance.Id} queue");
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
 
@@ -67,8 +67,12 @@ public class QueueController : ControllerBase {
 
     [HttpPost]
     [Authorize(Policy = "UploadVideo")]
+    [RequestFormLimits(MultipartBodyLengthLimit = Int64.MaxValue)]
+    [RequestSizeLimit(Int64.MaxValue)]
     [Route("fileUpload")]
-    public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, string connectionId, [FromBody] File fileData) {
+    public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, string connectionId) {
+        IFormFile? fileData = Request.Form.Files[0];
+        if (fileData == null) return NoContent();
         await using var context = await _contextFactory.CreateDbContextAsync();
         Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == instanceId);
         if (instance == null)
@@ -76,7 +80,6 @@ public class QueueController : ControllerBase {
 
         string? downloadLocation = context.Settings.FirstOrDefault(setting => setting.Key == SettingKey.DownloadLocation)?.Value;
         if (downloadLocation == null) return BadRequest("User has not setup file uploads");
-        byte[] bytes = Convert.FromBase64String(fileData.fileBase64);
         DirectoryInfo downloadDirectory = new DirectoryInfo(Path.Combine(downloadLocation, instance.Name));
         string hostedLocation = Path.Combine("/files", instance.Name);
         if (!downloadDirectory.Exists) {
@@ -88,17 +91,19 @@ public class QueueController : ControllerBase {
             Id = Guid.NewGuid(),
             AddedById = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)),
             InstanceId = instance.Id,
-            Name = fileData.fileName,
+            Name = fileData.FileName,
             VideoType = VideoType.FileUpload,
-            MediaType = fileData.MediaType,
+            MediaType = fileData.ContentType,
             Order = context.Queues.Count(queue => queue.InstanceId == instanceId)
         };
 
-        int lastIndexOfExtension = fileData.fileName.LastIndexOf(".", StringComparison.CurrentCulture);
-        string extension = fileData.fileName.Substring(lastIndexOfExtension, fileData.fileName.Length - lastIndexOfExtension);
+        int lastIndexOfExtension = fileData.FileName.LastIndexOf(".", StringComparison.CurrentCulture);
+        string extension = fileData.FileName.Substring(lastIndexOfExtension, fileData.FileName.Length - lastIndexOfExtension);
 
         string videoDownloadLocation = Path.Combine(downloadDirectory.FullName, $"temp-{queue.Id.ToString()}{extension}");
-        await System.IO.File.WriteAllBytesAsync(videoDownloadLocation, bytes);
+        //await System.IO.File.WriteAllBytesAsync(videoDownloadLocation, bytes);
+        await using FileStream fs = new FileStream(videoDownloadLocation, FileMode.Create);
+        await fileData.CopyToAsync(fs);
         _logger.LogInformation("Created temporary video upload file");
         FileHelper fileHelper = new FileHelper();
         var mediaInfo = await FfmpegHelper.GetFileMetadata(videoDownloadLocation);
@@ -107,9 +112,10 @@ public class QueueController : ControllerBase {
         IVideoStream? firstVideoStream = mediaInfo.VideoStreams.FirstOrDefault();
         if (container == null ||
             (Enum.TryParse<VideoCodec>(firstVideoStream?.Codec, false, out VideoCodec videoCodec) &&
-            !FileHelper.CheckSupportedFile(videoCodec, container.Value))) {
+             !FileHelper.CheckSupportedFile(videoCodec, container.Value))) {
             //todo need to check settings to know what format to convert to
             _logger.LogInformation("Video incorrect format; converting to valid web format");
+            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Upload", "File requires converting, this may take some time...", MatToastType.Warning);
             ConvertVideo(videoDownloadLocation, downloadDirectory, queue, hostedLocation, fileHelper, instanceId, connectionId);
 
             return Ok();
@@ -121,18 +127,20 @@ public class QueueController : ControllerBase {
 
 
         await AddUploadedVideoToDb(queue, hostedLocation, extension, fileHelper, videoDownloadLocation, downloadDirectory, context, instanceId);
+        await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
 
         return Ok();
     }
 
     private async Task ConvertVideo(string videoDownloadLocation, DirectoryInfo downloadDirectory, Queue queue, string hostedLocation, FileHelper fileHelper, Guid instanceId, string connectionId) {
         bool converted = await FfmpegHelper.ConvertVideo(_logger, VideoCodec.vp9, videoDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"));
-        
+
         if (converted) {
             _logger.LogInformation("Successfully converted video");
             queue.MediaType = "video/webm";
             await using var context = await _contextFactory.CreateDbContextAsync();
             await AddUploadedVideoToDb(queue, hostedLocation, ".webm", fileHelper, videoDownloadLocation, downloadDirectory, context, instanceId);
+            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
         } else {
             _logger.LogInformation("Error converting video");
             await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Error Uploading Video", "Could not upload the video; could not be converted to appropriate web video format", MatToastType.Danger);
@@ -146,7 +154,7 @@ public class QueueController : ControllerBase {
 
         context.Queues.Add(queue);
         await context.SaveChangesAsync();
-        
+
         _logger.LogInformation($"Video {queue.Name} added to instance {instanceId} queue");
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
     }
@@ -168,6 +176,7 @@ public class QueueController : ControllerBase {
         foreach (Queue existingQueue in context.Queues.Where(dbQueue => dbQueue.InstanceId == instanceId && dbQueue.Order > queue.Order)) {
             existingQueue.Order--;
         }
+
         context.Remove(queue);
         await context.SaveChangesAsync();
         _logger.LogInformation($"Video {queue.Name} removed from instance queue");
@@ -192,5 +201,4 @@ public class QueueController : ControllerBase {
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("QueueOrderChange", dbQueueList.ToList());
         return Ok();
     }
-    
 }

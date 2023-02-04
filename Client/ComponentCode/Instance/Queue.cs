@@ -1,7 +1,9 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using MatBlazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.SignalR.Client;
 using Sharenima.Shared;
 using Sharenima.Shared.Helpers;
@@ -30,10 +32,11 @@ public partial class Queue : ComponentBase {
 
     protected override async Task OnInitializedAsync() {
         var authState = await authenticationStateTask;
-        
+
         if (authState.User.Identity is { IsAuthenticated: true }) {
             _authHttpClient = HttpClientFactory.CreateClient("auth");
         }
+
         PermissionCheck();
         PermissionService.PermissionsUpdated += PermissionCheck;
 
@@ -53,6 +56,32 @@ public partial class Queue : ComponentBase {
 
         if (!addVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not add video; {addVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
+        }
+    }
+
+    protected async void UploadVideoToQueueNew(InputFileChangeEventArgs e) {
+        if (_authHttpClient == null) return;
+        //todo handle above
+        _authHttpClient.Timeout = TimeSpan.FromHours(1);
+        // gives the user and hour to upload a file, any longer and an error is returned
+        using var content = new MultipartFormDataContent();
+        content.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data");
+
+        try {
+            var file = e.File;
+            var fileContent = new StreamContent(file.OpenReadStream(Int64.MaxValue));
+
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "\"files\"", file.Name);
+        } catch (Exception exception) {
+            _toaster.Add($"Couldn't upload file: {exception.Message}", MatToastType.Danger, "Upload Error");
+            return;
+        }
+        Console.WriteLine(content.FirstOrDefault());
+        _toaster.Add($"Uploading file...", MatToastType.Info, "Upload");
+        var uploadVideoResponse = await _authHttpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}&connectionId={HubConnection?.ConnectionId}", content);
+        if (!uploadVideoResponse.IsSuccessStatusCode) {
+            _toaster.Add($"Could not upload video; {uploadVideoResponse.ReasonPhrase}", MatToastType.Danger, "Upload Error");
         }
     }
 
@@ -119,7 +148,7 @@ public partial class Queue : ComponentBase {
         Authenticated = PermissionService.CheckIfUserHasPermission(Permissions.Permission.DeleteVideo);
         StateHasChanged();
     }
-    
+
     protected async void OnDrop() {
         if (_authHttpClient == null) return;
 
