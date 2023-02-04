@@ -1,19 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="AsyncEventHandlers" Version="3.0.1" />
-    <PackageReference Include="MatBlazor" Version="2.8.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.6" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="6.0.6" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="6.0.6" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.7" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
+    <PackageReference Include="blazor-dragdrop" Version="2.4.0" />
+    <PackageReference Include="MatBlazor" Version="2.9.0-develop-042" />
+    <PackageReference Include="Material.Blazor" Version="4.0.0-preview.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.2" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="7.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="7.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +24,10 @@
 
   <ItemGroup>
     <None Include="wwwroot\JS\YoutubeApi.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Helpers" />
   </ItemGroup>
 
 </Project>
