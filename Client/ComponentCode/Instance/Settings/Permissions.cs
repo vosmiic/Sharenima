@@ -19,7 +19,7 @@ public partial class Permissions : ComponentBase {
     protected InstancePermissions? InstancePermissions { get; set; }
     protected UserPermissions? SelectedUser { get; set; }
     protected List<PermissionOptions> PermissionOptions = new();
-    private bool AnonymousUser { get; set; }
+    protected bool AnonymousUser { get; set; }
     protected bool Ready { get; set; }
     private HttpClient? _httpClient { get; set; }
 
