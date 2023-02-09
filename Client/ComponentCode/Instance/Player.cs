@@ -11,11 +11,13 @@ public partial class Player : ComponentBase {
     [Inject] private QueuePlayerService QueuePlayerService { get; set; }
     [Inject] protected RefreshService RefreshService { get; set; }
     [Inject] private PermissionService PermissionService { get; set; }
+    [Inject] private StreamService StreamService { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public State? InitialState { get; set; }
     [Parameter] public TimeSpan VideoTime { get; set; }
     protected Sharenima.Shared.Queue? Video { get; set; }
+    protected string? StreamUrl { get; set; }
     private State playerState { get; set; }
     private DotNetObjectReference<Player>? objRef;
     private bool _initialVideoLoad = true;
@@ -71,6 +73,7 @@ public partial class Player : ComponentBase {
     protected override async Task OnInitializedAsync() {
         RefreshService.PlayerRefreshRequested += NewVideo;
         RefreshService.PlayerVideoEnded += EndVideo;
+        StreamService.WatchStream += StartWatchingStream;
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
 
@@ -115,6 +118,8 @@ public partial class Player : ComponentBase {
                     await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing, Video.Id);
                     break;
             }
+        } else if (StreamUrl != null) {
+            await _jsRuntime.InvokeVoidAsync("initializeStreamPlayer", StreamUrl);
         }
     }
 
@@ -166,5 +171,14 @@ public partial class Player : ComponentBase {
         }
 
         return false;
+    }
+
+    private async Task StartWatchingStream(CancellationToken cancellationToken) {
+        StreamUrl = $"";//{StreamService.streamUsername}";
+        // todo change above; hardcoded during development
+        Video = null;
+        await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
+        
+        StateHasChanged();
     }
 }

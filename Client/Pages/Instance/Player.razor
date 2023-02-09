@@ -16,7 +16,10 @@
             </div>
             break;
     }
-    
+} else if (StreamUrl != null) {
+    <div id="streamContainer" class="playerContainer" style="height: unset">
+        <div id="streamPlayer"></div>
+    </div>
 } else {
-    <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" />
+    <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
 }
