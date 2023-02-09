@@ -19,6 +19,7 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 builder.Services.AddScoped<QueuePlayerService>();
 builder.Services.AddScoped<RefreshService>();
 builder.Services.AddScoped<PermissionService>();
+builder.Services.AddScoped<StreamService>();
 
 builder.Services.AddAuthorizationCore(options => {
     options.AddPolicy("Admin", policy =>
