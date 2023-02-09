@@ -5,6 +5,7 @@
             @foreach (string userName in UserList) {
                 <MatListItem>
                     @userName
+                    <ChatMenu Username="@userName"></ChatMenu>
                 </MatListItem>
             }
         </MatList>

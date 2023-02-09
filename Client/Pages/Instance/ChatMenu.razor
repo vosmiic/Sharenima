@@ -1,0 +1,6 @@
+@inherits Sharenima.Client.ComponentCode.ChatMenu
+
+<MatButton Icon="more_vert" OnClick="@OnMenuButtonClick" RefBack="@buttonForwardRef"></MatButton>
+<MatMenu @ref="Menu" TargetForwardRef="@buttonForwardRef">
+    <MatListItem OnClick="@WatchStreamClicked">Watch Stream</MatListItem>
+</MatMenu>
