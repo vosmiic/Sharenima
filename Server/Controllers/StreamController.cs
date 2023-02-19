@@ -47,7 +47,7 @@ public class StreamController : ControllerBase {
         ApplicationUser? user = await context.Users.FirstOrDefaultAsync(user => user.Id == userId);
         if (user != null) {
             string toBeHashedUrl = $"{_baseStreamUrl}/{user.UserName}?policy={encodedPolicy}";
-            HMACSHA1 hmacsha1 = new HMACSHA1("aKq#1kj"u8.ToArray());
+            HMACSHA1 hmacsha1 = new HMACSHA1(""u8.ToArray());
             byte[] hash = hmacsha1.ComputeHash(new ASCIIEncoding().GetBytes(toBeHashedUrl));
             string streamUrl = $"{toBeHashedUrl}&signature={Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_')}";
             
