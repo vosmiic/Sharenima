@@ -10,4 +10,6 @@ public class ApplicationUser : IdentityUser {
         get => _advancedRoles ?? (_advancedRoles = new List<AdvancedRole>());
         protected set => _advancedRoles = value;
     }
+    
+    public string? StreamKey { get; set; }
 }
