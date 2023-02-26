@@ -1,24 +1,30 @@
 using System.Security.Claims;
+using Duende.IdentityServer.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Sharenima.Server.Data;
 using Sharenima.Shared;
+using Sharenima.Shared.Configuration;
 
 namespace Sharenima.Server.SignalR;
 
 public class QueueHub : Hub {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
+    private readonly IDbContextFactory<ApplicationDbContext> _applicationDbContextFactory;
     private readonly ConnectionMapping _connectionMapping;
     private readonly ILogger<QueueHub> _logger;
     private readonly IMemoryCache _memoryCache;
+    private readonly IConfiguration _configuration;
 
-    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger, IMemoryCache memoryCache) {
+    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger, IMemoryCache memoryCache, IConfiguration configuration, IDbContextFactory<ApplicationDbContext> applicationDbContextFactory) {
         _contextFactory = contextFactory;
         _connectionMapping = connectionMapping;
         _logger = logger;
         _memoryCache = memoryCache;
+        _configuration = configuration;
+        _applicationDbContextFactory = applicationDbContextFactory;
     }
 
     public override async Task OnConnectedAsync() {
@@ -28,8 +34,12 @@ public class QueueHub : Hub {
         if (httpContext == null) return;
         var instanceId = httpContext.Request.Query["instanceId"];
         if (instanceId.Count == 0) return;
-
-        _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId, userId);
+        string? username = null;
+        if (Context.User?.IsAuthenticated() == true) {
+            await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
+            username = context.Users.FirstOrDefault(user => user.Id == userId)?.UserName;
+        }
+        _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId, username);
         _logger.LogInformation($"Added {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} to instance {instanceId[0]} connection map");
         if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", parsedUserId.Value);
     }
@@ -69,6 +79,7 @@ public class QueueHub : Hub {
                 _logger.LogInformation($"Updating instance {instance.Id} state in database");
                 instance.PlayerState = playerState;
             }
+
             await context.SaveChangesAsync();
             await Clients.Group(groupName).SendAsync("ReceiveStateChange", playerState);
         }
@@ -78,7 +89,7 @@ public class QueueHub : Hub {
     public async Task SendProgressChange(string groupName, TimeSpan videoTime, bool seeked, Guid? videoId) {
         if (seeked ||
             (!_memoryCache.TryGetValue($"lastUpdate-{groupName}", out DateTime lastUpdate) &&
-            DateTime.UtcNow > lastUpdate.AddMilliseconds(300))) {
+             DateTime.UtcNow > lastUpdate.AddMilliseconds(300))) {
             _memoryCache.Set($"lastUpdate-{groupName}", DateTime.UtcNow, TimeSpan.FromSeconds(2));
             await using var context = await _contextFactory.CreateDbContextAsync();
             if (videoId == null || context.Queues.FirstOrDefault(queue => queue.Id == videoId) == null) return;
@@ -91,4 +102,6 @@ public class QueueHub : Hub {
             await Clients.Group(groupName).SendAsync("ReceiveProgressChange", videoTime);
         }
     }
+
+    public string? GetConfigurationValue(ConfigKey configKey) => _configuration[$"Stream:{configKey.ToString()}"];
 }

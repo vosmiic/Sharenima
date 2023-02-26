@@ -1,8 +1,11 @@
+using System.Net.Http.Json;
 using System.Text.RegularExpressions;
+using MatBlazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
 using Sharenima.Shared;
+using Sharenima.Shared.Configuration;
 
 namespace Sharenima.Client.ComponentCode;
 
@@ -12,6 +15,8 @@ public partial class Player : ComponentBase {
     [Inject] protected RefreshService RefreshService { get; set; }
     [Inject] private PermissionService PermissionService { get; set; }
     [Inject] private StreamService StreamService { get; set; }
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; }
+    [Inject] protected IMatToaster _toaster { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public State? InitialState { get; set; }
@@ -21,6 +26,7 @@ public partial class Player : ComponentBase {
     private State playerState { get; set; }
     private DotNetObjectReference<Player>? objRef;
     private bool _initialVideoLoad = true;
+    private HttpClient _anonymousHttpClient { get; set; }
 
     [JSInvokable]
     public void StateChange(int value) {
@@ -76,6 +82,7 @@ public partial class Player : ComponentBase {
         StreamService.WatchStream += StartWatchingStream;
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
+        _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
 
         await Hub();
     }
@@ -173,8 +180,11 @@ public partial class Player : ComponentBase {
         return false;
     }
 
-    private async Task StartWatchingStream(CancellationToken cancellationToken) {
-        StreamUrl = $"";//{StreamService.streamUsername}";
+    public async Task StartWatchingStream(CancellationToken cancellationToken) {
+        HttpResponseMessage httpResponseMessage = await _anonymousHttpClient.GetAsync($"config?configKey={ConfigKey.BasePlayUrl}");
+        if (!httpResponseMessage.IsSuccessStatusCode) _toaster.Add("Could not connect to server", MatToastType.Danger, "Connection Error");
+        string? playUrl = await httpResponseMessage.Content.ReadAsStringAsync();
+        StreamUrl = playUrl?.Replace("{User}", StreamService.streamUsername);
         // todo change above; hardcoded during development
         Video = null;
         await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
