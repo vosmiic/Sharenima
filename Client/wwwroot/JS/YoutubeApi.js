@@ -58,6 +58,7 @@ function youtubeOnReady(event) {
             }
         }, 500);
     }
+    dotNetHelper.invokeMethodAsync('SetReady', true);
 }
 
 let initialLoad = true;

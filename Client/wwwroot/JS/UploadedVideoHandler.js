@@ -41,6 +41,7 @@ function loadVideoFunctions(autoplay, currentVideoId) {
         dotNetHelper.invokeMethodAsync('RequestStoredVideoTime').then((time) => {
             video.currentTime = time;
         });
+        dotNetHelper.invokeMethodAsync('SetReady', true);
     });
     
     if (autoplay) {
