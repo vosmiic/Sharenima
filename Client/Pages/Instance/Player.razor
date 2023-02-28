@@ -1,4 +1,3 @@
-@page "/Player"
 @using Sharenima.Shared
 @inherits Sharenima.Client.ComponentCode.Player
 @if (Video != null) {
@@ -18,6 +17,12 @@
     }
 } else if (StreamUrl != null) {
     <div id="streamContainer" class="playerContainer" style="height: unset">
+        <nav class="navbar navbar-dark bg-light">
+            <div class="mx-auto"></div>
+            <div class="d-flex flex-row-reverse bd-highlight">
+                <MatIconButton Icon="close" OnClick="CloseStreamClicked"></MatIconButton>
+            </div>
+        </nav>
         <div id="streamPlayer"></div>
     </div>
 } else {

@@ -26,6 +26,7 @@ public partial class Player : ComponentBase {
     private State playerState { get; set; }
     private DotNetObjectReference<Player>? objRef;
     private bool _initialVideoLoad = true;
+    private bool _videoReady;
     private HttpClient _anonymousHttpClient { get; set; }
 
     [JSInvokable]
@@ -39,10 +40,11 @@ public partial class Player : ComponentBase {
 
     [JSInvokable]
     public async void ProgressChange(Guid videoId, double newTime, bool seeked) {
-        if (playerState != State.Ended && videoId == Video?.Id && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
+        if (_videoReady && playerState != State.Ended && videoId == Video?.Id && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
             if (_initialVideoLoad) {
                 if (await SendProgressChange(VideoTime.TotalSeconds, Video?.Id))
                     _initialVideoLoad = false;
+                return;
             }
 
             TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
@@ -76,6 +78,9 @@ public partial class Player : ComponentBase {
     public double RequestStoredVideoTime() =>
         VideoTime.TotalSeconds;
 
+    [JSInvokable]
+    public void SetReady(bool ready) => _videoReady = ready;
+
     protected override async Task OnInitializedAsync() {
         RefreshService.PlayerRefreshRequested += NewVideo;
         RefreshService.PlayerVideoEnded += EndVideo;
@@ -104,6 +109,7 @@ public partial class Player : ComponentBase {
     }
 
     private async Task EndVideo(CancellationToken cancellationToken) {
+        _videoReady = false;
         if (Video?.VideoType == VideoType.YouTube &&
             QueuePlayerService.CurrentQueue.FirstOrDefault(queue => queue.Order == Video?.Order + 1)?.VideoType != VideoType.YouTube) {
             await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
@@ -185,10 +191,16 @@ public partial class Player : ComponentBase {
         if (!httpResponseMessage.IsSuccessStatusCode) _toaster.Add("Could not connect to server", MatToastType.Danger, "Connection Error");
         string? playUrl = await httpResponseMessage.Content.ReadAsStringAsync();
         StreamUrl = playUrl?.Replace("{User}", StreamService.streamUsername);
-        // todo change above; hardcoded during development
         Video = null;
+        _videoReady = false;
         await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
         
         StateHasChanged();
+    }
+
+    public async Task CloseStreamClicked() {
+        StreamUrl = null;
+        _initialVideoLoad = true;
+        await NewVideo(new CancellationToken());
     }
 }
