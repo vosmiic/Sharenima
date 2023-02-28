@@ -1,4 +1,5 @@
 var dotNetHelper;
+let livePlayer;
 
 function setDotNetHelper(value) {
     dotNetHelper = value;
@@ -6,16 +7,28 @@ function setDotNetHelper(value) {
 
 function initializeStreamPlayer(streamUrl) {
     if (document.getElementById('streamPlayer') != null) {
-        const livePlayer = OvenPlayer.create('streamPlayer', {
+        livePlayer = OvenPlayer.create('streamPlayer', {
             sources: [
                 {
-                    label: 'label_for_webrtc',
-                    // Set the type to 'webrtc'
+                    label: 'LIVE',
                     type: 'webrtc',
-                    // Set the file to WebRTC Signaling URL with OvenMediaEngine 
                     file: streamUrl
                 }
             ]
         });
+    }
+}
+
+function loadNewStream(streamUrl) {
+    if (livePlayer) {
+        livePlayer.load({
+            sources: [
+                {
+                    label: 'LIVE',
+                    type: 'webrtc',
+                    file: streamUrl
+                }
+            ]
+        })
     }
 }

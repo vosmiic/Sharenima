@@ -190,12 +190,17 @@ public partial class Player : ComponentBase {
         HttpResponseMessage httpResponseMessage = await _anonymousHttpClient.GetAsync($"config?configKey={ConfigKey.BasePlayUrl}");
         if (!httpResponseMessage.IsSuccessStatusCode) _toaster.Add("Could not connect to server", MatToastType.Danger, "Connection Error");
         string? playUrl = await httpResponseMessage.Content.ReadAsStringAsync();
+        bool streamAlreadyPlaying = StreamUrl != null;
         StreamUrl = playUrl?.Replace("{User}", StreamService.streamUsername);
-        Video = null;
-        _videoReady = false;
-        await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
+        if (streamAlreadyPlaying) {
+            await _jsRuntime.InvokeVoidAsync("loadNewStream", StreamUrl);
+        } else {
+            Video = null;
+            _videoReady = false;
+            await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
         
-        StateHasChanged();
+            StateHasChanged();
+        }
     }
 
     public async Task CloseStreamClicked() {
