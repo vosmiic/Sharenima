@@ -5,34 +5,31 @@
 @if (SelectedInstance == null) {
     <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
 } else {
-    <MatAppBarContainer>
-        <MatAppBar Fixed="true">
-            <MatAppBarRow>
-                <MatAppBarSection>
-                    <MatIconButton OnClick="@SettingsButtonClicked" Icon="settings"></MatIconButton>
-                    <MatAppBarTitle>Instance @SelectedInstance.Name</MatAppBarTitle>
-                </MatAppBarSection>
-            </MatAppBarRow>
-        </MatAppBar>
+    <div>
+        <nav class="navbar navbar-dark bg-light">
+            <MatIconButton Icon="@QueueResizeButtonIcon" OnClick="() => ClickedQueueResizeButton(!HideQueue)"></MatIconButton>
+            <MatIconButton OnClick="@SettingsButtonClicked" Icon="settings"></MatIconButton>
+            <MatAppBarTitle>Instance @SelectedInstance.Name</MatAppBarTitle>
+            <div class="mx-auto"></div>
+            <MatIconButton Icon="@ChatResizeButtonIcon" OnClick="() => ClickedChatResizeButton(!HideChat)"></MatIconButton>
+        </nav>
 
-        <MatAppBarContent>
-            <div class="mat-layout-grid p-0">
-                <div class="mat-layout-grid-inner">
-                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2">
-                        <Queue InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection"></Queue>
-                    </div>
-                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8">
-                        @if (QueuePlayerService.CurrentQueue.FirstOrDefault() != null) {
-                            <Player InstanceId="@SelectedInstance.Id" InitialState="@SelectedInstance.PlayerState" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime"></Player>
-                        }
-                    </div>
-                    <div class="mat-layout-grid-cell mat-layout-grid-cell-span-2">
-                        <Chat InstanceId="SelectedInstance.Id" HubConnection="@_hubConnection"></Chat>
-                    </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-2 @(HideQueue ? "d-none" : String.Empty)">
+                    <Queue InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection"></Queue>
+                </div>
+                <div class="col-@PlayerColumnSize p-0">
+                    @if (QueuePlayerService.CurrentQueue.FirstOrDefault() != null) {
+                        <Player InstanceId="@SelectedInstance.Id" InitialState="@SelectedInstance.PlayerState" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime"></Player>
+                    }
+                </div>
+                <div class="col-2 @(HideChat ? "d-none" : String.Empty)">
+                    <Chat InstanceId="SelectedInstance.Id" HubConnection="@_hubConnection"></Chat>
                 </div>
             </div>
-        </MatAppBarContent>
-    </MatAppBarContainer>
+        </div>
+    </div>
 
     <MatDialog @bind-IsOpen="@settingsIsOpen">
         <MatDialogTitle>Instance Settings</MatDialogTitle>

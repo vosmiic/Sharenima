@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
-using Sharenima.Client.Helpers;
 using Sharenima.Shared;
 
 namespace Sharenima.Client.ComponentCode;
@@ -28,12 +27,17 @@ public partial class Instance : ComponentBase {
     protected bool settingsIsOpen = false;
     private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
+    protected bool HideQueue { get; set; }
+    protected string QueueResizeButtonIcon { get; set; } = "arrow_back";
+    protected bool HideChat { get; set; }
+    protected string ChatResizeButtonIcon { get; set; } = "arrow_forward";
+    protected int PlayerColumnSize { get; set; } = 8;
 
 
     protected override async Task OnInitializedAsync() {
         RefreshService.InstanceIndexRefreshRequested += StateChanged;
         var authState = await authenticationStateTask;
-        
+
         if (authState.User.Identity is { IsAuthenticated: true }) {
             _authHttpClient = HttpClientFactory.CreateClient("auth");
         }
@@ -54,7 +58,7 @@ public partial class Instance : ComponentBase {
         }
 
         SelectedInstance = instance;
-        
+
         _hubConnection = new HubConnectionBuilder()
             .WithUrl(_navigationManager.ToAbsoluteUri("/queuehub?instanceId=" + instance.Id), options => {
                 options.AccessTokenProvider = async () => {
@@ -78,9 +82,10 @@ public partial class Instance : ComponentBase {
             } else {
                 PermissionService.RemoveFromUserPermissions(permission);
             }
+
             PermissionService.CallPermissionsUpdated();
         });
-        
+
         isLoaded = true;
     }
 
@@ -96,5 +101,27 @@ public partial class Instance : ComponentBase {
         if (_authHttpClient == null)
             return _anonymousHttpClient;
         return _authHttpClient;
+    }
+
+    protected void ClickedChatResizeButton(bool hide) {
+        HideChat = hide;
+        if (hide) {
+            ChatResizeButtonIcon = "arrow_back";
+            PlayerColumnSize += 2;
+        } else {
+            ChatResizeButtonIcon = "arrow_forward";
+            PlayerColumnSize -= 2;
+        }
+    }
+
+    protected void ClickedQueueResizeButton(bool hide) {
+        HideQueue = hide;
+        if (hide) {
+            QueueResizeButtonIcon = "arrow_forward";
+            PlayerColumnSize += 2;
+        } else {
+            QueueResizeButtonIcon = "arrow_back";
+            PlayerColumnSize -= 2;
+        }
     }
 }
