@@ -33,9 +33,10 @@ public class FileHelper {
     public static bool CheckSupportedFile(VideoCodec codec, SupportedContainer container) {
         switch (container) {
             case SupportedContainer.Mp4:
-                return codec is VideoCodec.av1 or VideoCodec.hevc or VideoCodec.vp9;
             case SupportedContainer.Webm:
-                return codec is VideoCodec.av1 or VideoCodec.vp8 or VideoCodec.vp9;
+                return codec is VideoCodec.av1 or VideoCodec.h264 or VideoCodec.vp8 or VideoCodec.vp9;
+            case SupportedContainer.Ogg:
+                return true;
             default:
                 return false;
         }
@@ -43,6 +44,7 @@ public class FileHelper {
 
     public enum SupportedContainer {
         Mp4,
-        Webm
+        Webm,
+        Ogg
     }
 }
