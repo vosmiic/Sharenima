@@ -23,15 +23,17 @@ public class QueueController : ControllerBase {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
     private readonly IHubContext<QueueHub> _hubContext;
     private readonly ILogger<QueueController> _logger;
+    private readonly IConfiguration _configuration;
 
     public QueueController(HttpClient httpClient,
         IDbContextFactory<GeneralDbContext> contextFactory,
         IHubContext<QueueHub> hubContext,
-        ILogger<QueueController> logger) {
+        ILogger<QueueController> logger, IConfiguration configuration) {
         _httpClient = httpClient;
         _contextFactory = contextFactory;
         _hubContext = hubContext;
         _logger = logger;
+        _configuration = configuration;
     }
 
     [HttpPost]
@@ -79,6 +81,7 @@ public class QueueController : ControllerBase {
             return BadRequest("Instance not found");
 
         string? downloadLocation = context.Settings.FirstOrDefault(setting => setting.Key == SettingKey.DownloadLocation)?.Value;
+        //todo read above from appsettings
         if (downloadLocation == null) return BadRequest("User has not setup file uploads");
         DirectoryInfo downloadDirectory = new DirectoryInfo(Path.Combine(downloadLocation, instance.Name));
         string hostedLocation = Path.Combine("/files", instance.Name);
@@ -101,7 +104,6 @@ public class QueueController : ControllerBase {
         string extension = fileData.FileName.Substring(lastIndexOfExtension, fileData.FileName.Length - lastIndexOfExtension);
 
         string videoDownloadLocation = Path.Combine(downloadDirectory.FullName, $"temp-{queue.Id.ToString()}{extension}");
-        //await System.IO.File.WriteAllBytesAsync(videoDownloadLocation, bytes);
         await using FileStream fs = new FileStream(videoDownloadLocation, FileMode.Create);
         await fileData.CopyToAsync(fs);
         _logger.LogInformation("Created temporary video upload file");
@@ -178,6 +180,12 @@ public class QueueController : ControllerBase {
         }
 
         context.Remove(queue);
+        if (queue.VideoType == VideoType.FileUpload) {
+            FileHelper.DeleteFile(queue.Url, _configuration, _logger);
+            if (queue.Thumbnail != null)
+                FileHelper.DeleteFile(queue.Thumbnail, _configuration, _logger);
+        }
+
         await context.SaveChangesAsync();
         _logger.LogInformation($"Video {queue.Name} removed from instance queue");
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("RemoveVideo", queue.Id);

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Sharenima.Server.Data;
+using Sharenima.Server.Helpers;
 using Sharenima.Shared;
 using Sharenima.Shared.Configuration;
 
@@ -39,6 +40,7 @@ public class QueueHub : Hub {
             await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
             username = context.Users.FirstOrDefault(user => user.Id == userId)?.UserName;
         }
+
         _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId, username);
         _logger.LogInformation($"Added {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} to instance {instanceId[0]} connection map");
         if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", parsedUserId.Value);
@@ -70,6 +72,12 @@ public class QueueHub : Hub {
             Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
             if (playerState == State.Ended) {
                 context.Remove(queue);
+                if (queue.VideoType == VideoType.FileUpload) {
+                    FileHelper.DeleteFile(queue.Url, _configuration, _logger);
+                    if (queue.Thumbnail != null)
+                        FileHelper.DeleteFile(queue.Thumbnail, _configuration, _logger);
+                }
+
                 if (instance != null) {
                     instance.VideoTime = TimeSpan.Zero;
                 }

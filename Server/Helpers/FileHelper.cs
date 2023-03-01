@@ -30,6 +30,24 @@ public class FileHelper {
         return null;
     }
 
+    public static void DeleteFile(string fileUrl, IConfiguration configuration, ILogger logger) {
+        string? rootVideoDownloadLocation = configuration["VideoDownloadLocation"];
+        if (rootVideoDownloadLocation == null) return;
+        string videoFileAndDirectory = fileUrl.Replace("/files/", String.Empty);
+        string fileLocation = Path.Combine(rootVideoDownloadLocation, videoFileAndDirectory);
+        
+        if (File.Exists(fileLocation)) {
+            logger.LogInformation($"Attempting to delete uploaded file {fileLocation}...");
+            try {
+                File.Delete(fileLocation);
+            } catch (Exception e) {
+                logger.LogWarning($"Could not delete uploaded file {fileLocation}; {e.Message}");
+            }
+        } else {
+            logger.LogWarning($"Could not delete uploaded file {fileLocation}; file does not exist or incorrect permissions");
+        }
+    }
+
     public static bool CheckSupportedFile(VideoCodec codec, SupportedContainer container) {
         switch (container) {
             case SupportedContainer.Mp4:
