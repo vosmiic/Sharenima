@@ -137,7 +137,7 @@ public partial class Player : ComponentBase {
     }
 
     protected override void OnParametersSet() {
-        Video = QueuePlayerService.CurrentQueue.FirstOrDefault();
+        Video = QueuePlayerService.CurrentQueue.MinBy(queue => queue.Order);
     }
 
     private async Task Hub() {
@@ -198,7 +198,7 @@ public partial class Player : ComponentBase {
             Video = null;
             _videoReady = false;
             await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
-        
+
             StateHasChanged();
         }
     }
