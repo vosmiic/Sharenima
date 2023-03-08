@@ -13,28 +13,40 @@ public class FfmpegHelper {
         return ffprobeResult;
     }
 
-    public static async Task<bool> ConvertVideo(ILogger logger, VideoCodec codec, string videoFilePath, string convertedVideoOutputPath) {
-        IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(videoFilePath);
+    public static async Task<bool> ConvertVideo(ILogger logger, string videoFilePath, string convertedVideoOutputPath, VideoCodec videoCodec) => await ConvertMedia(logger, videoFilePath, convertedVideoOutputPath, videoCodec: videoCodec);
+    public static async Task<bool> ConvertAudio(ILogger logger, string audioFilePath, string convertedAudioOutputPath, AudioCodec audioCodec) => await ConvertMedia(logger, audioFilePath, convertedAudioOutputPath, audioCodec: audioCodec);
 
-        IStream? videoStream = mediaInfo.VideoStreams.FirstOrDefault()?.SetCodec(codec);
-        if (videoStream == null) {
-            logger.LogInformation("Cannot convert video; no video streams detected");
+    private static async Task<bool> ConvertMedia(ILogger logger, string mediaFilePath, string convertedMediaOutputPath, VideoCodec? videoCodec = null, AudioCodec? audioCodec = null) {
+        IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(mediaFilePath);
+
+        IStream? stream = null;
+        if (videoCodec != null) {
+            stream = mediaInfo.VideoStreams.FirstOrDefault()?.SetCodec(videoCodec.Value);
+        }
+
+        if (audioCodec != null) {
+            stream = mediaInfo.AudioStreams.FirstOrDefault()?.SetCodec(audioCodec.Value);
+        }
+
+        if (stream == null) {
+            logger.LogInformation("Cannot convert video; no media streams detected");
             return false;
         }
-        IStream? audioStream = mediaInfo.AudioStreams.FirstOrDefault();
 
         IConversion conversion = FFmpeg.Conversions.New()
-            .AddStream(videoStream)
-            .SetOutput(convertedVideoOutputPath);
-        if (audioStream != null) {
-            conversion.AddStream(audioStream);
+            .AddStream(stream)
+            .SetOutput(convertedMediaOutputPath);
+        if (videoCodec != null) {
+            IStream? audioStream = mediaInfo.AudioStreams.FirstOrDefault();
+            if (audioStream != null)
+                conversion.AddStream(audioStream);
         }
 
         try {
             await conversion.Start();
         } catch (Exception e) {
             // todo log e
-            logger.LogError($"Error converting video; {e.Message}");
+            logger.LogError($"Error converting media; {e.Message}");
             return false;
         }
 
@@ -44,7 +56,7 @@ public class FfmpegHelper {
     public static async Task<IMediaInfo> GetFileMetadata(string filePath) {
         return await FFmpeg.GetMediaInfo(filePath);
     }
-    
+
 
     public static async Task<bool> IsFfmpegInstalled(string argument) {
         string errorResult = "";

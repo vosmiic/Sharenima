@@ -103,56 +103,68 @@ public class QueueController : ControllerBase {
         int lastIndexOfExtension = fileData.FileName.LastIndexOf(".", StringComparison.CurrentCulture);
         string extension = fileData.FileName.Substring(lastIndexOfExtension, fileData.FileName.Length - lastIndexOfExtension);
 
-        string videoDownloadLocation = Path.Combine(downloadDirectory.FullName, $"temp-{queue.Id.ToString()}{extension}");
-        await using FileStream fs = new FileStream(videoDownloadLocation, FileMode.Create);
+        string mediaDownloadLocation = Path.Combine(downloadDirectory.FullName, $"temp-{queue.Id.ToString()}{extension}");
+        await using FileStream fs = new FileStream(mediaDownloadLocation, FileMode.Create);
         await fileData.CopyToAsync(fs);
         _logger.LogInformation("Created temporary video upload file");
         FileHelper fileHelper = new FileHelper();
-        var mediaInfo = await FfmpegHelper.GetFileMetadata(videoDownloadLocation);
-        if (mediaInfo.VideoStreams.FirstOrDefault()?.Bitrate == null) return BadRequest("Invalid file type");
-        FileHelper.SupportedContainer? container = fileHelper.GetVideoContainer(videoDownloadLocation);
+        var mediaInfo = await FfmpegHelper.GetFileMetadata(mediaDownloadLocation);
+        if (mediaInfo.AudioStreams.FirstOrDefault()?.Bitrate == null && 
+            mediaInfo.VideoStreams.FirstOrDefault()?.Bitrate == null) 
+            return BadRequest("Invalid file type");
+        FileHelper.SupportedContainer? container = fileHelper.GetMediaContainer(mediaDownloadLocation);
         IVideoStream? firstVideoStream = mediaInfo.VideoStreams.FirstOrDefault();
+        IAudioStream? firstAudioStream = mediaInfo.AudioStreams.FirstOrDefault();
         if (container == null ||
-            (Enum.TryParse<VideoCodec>(firstVideoStream?.Codec, false, out VideoCodec videoCodec) &&
-             !FileHelper.CheckSupportedFile(videoCodec, container.Value))) {
+            (firstVideoStream != null && Enum.TryParse<VideoCodec>(firstVideoStream?.Codec, false, out VideoCodec videoCodec) &&
+             !FileHelper.CheckSupportedFile(container.Value, videoCodec: videoCodec)) ||
+            (firstAudioStream != null && Enum.TryParse<AudioCodec>(firstAudioStream?.Codec, false, out AudioCodec audioCodec) && 
+             !FileHelper.CheckSupportedFile(container.Value, audioCodec: audioCodec))) {
             //todo need to check settings to know what format to convert to
-            _logger.LogInformation("Video incorrect format; converting to valid web format");
+            _logger.LogInformation("Uploaded file incorrect format; converting to valid web format");
             await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Upload", "File requires converting, this may take some time...", MatToastType.Warning);
-            ConvertVideo(videoDownloadLocation, downloadDirectory, queue, hostedLocation, fileHelper, instanceId, connectionId);
+            ConvertUploadedFile(firstVideoStream != null, mediaDownloadLocation, downloadDirectory, queue, hostedLocation, fileHelper, instanceId, connectionId);
 
             return Ok();
         }
 
         string newFileName = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
-        System.IO.File.Move(videoDownloadLocation, newFileName);
-        videoDownloadLocation = newFileName;
+        System.IO.File.Move(mediaDownloadLocation, newFileName);
+        mediaDownloadLocation = newFileName;
 
 
-        await AddUploadedVideoToDb(queue, hostedLocation, extension, fileHelper, videoDownloadLocation, downloadDirectory, context, instanceId);
+        await AddUploadedVideoToDb(queue, hostedLocation, extension, fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, firstVideoStream != null);
         await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
 
         return Ok();
     }
 
-    private async Task ConvertVideo(string videoDownloadLocation, DirectoryInfo downloadDirectory, Queue queue, string hostedLocation, FileHelper fileHelper, Guid instanceId, string connectionId) {
-        bool converted = await FfmpegHelper.ConvertVideo(_logger, VideoCodec.vp9, videoDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"));
+    private async Task ConvertUploadedFile(bool forVideo, string mediaDownloadLocation, DirectoryInfo downloadDirectory, Queue queue, string hostedLocation, FileHelper fileHelper, Guid instanceId, string connectionId) {
+        bool converted;
+        if (forVideo) {
+            converted = await FfmpegHelper.ConvertVideo(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"), videoCodec: VideoCodec.vp9);
+        } else {
+            converted = await FfmpegHelper.ConvertAudio(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.flac"), audioCodec: AudioCodec.flac);
+        }
 
         if (converted) {
-            _logger.LogInformation("Successfully converted video");
-            queue.MediaType = "video/webm";
+            _logger.LogInformation("Successfully converted media");
+            queue.MediaType = forVideo ? "video/webm" : "audio/flac";
             await using var context = await _contextFactory.CreateDbContextAsync();
-            await AddUploadedVideoToDb(queue, hostedLocation, ".webm", fileHelper, videoDownloadLocation, downloadDirectory, context, instanceId);
+            await AddUploadedVideoToDb(queue, hostedLocation, forVideo ? ".webm" : ".flac", fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, forVideo);
             await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
         } else {
-            _logger.LogInformation("Error converting video");
-            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Error Uploading Video", "Could not upload the video; could not be converted to appropriate web video format", MatToastType.Danger);
+            _logger.LogInformation("Error converting media");
+            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Error Uploading Media", "Could not upload the media; could not be converted to appropriate web media format", MatToastType.Danger);
         }
     }
 
-    private async Task AddUploadedVideoToDb(Queue queue, string hostedLocation, string extension, FileHelper fileHelper, string videoDownloadLocation, DirectoryInfo downloadDirectory, GeneralDbContext context, Guid instanceId) {
+    private async Task AddUploadedVideoToDb(Queue queue, string hostedLocation, string extension, FileHelper fileHelper, string videoDownloadLocation, DirectoryInfo downloadDirectory, GeneralDbContext context, Guid instanceId, bool forVideo) {
         queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
-        string? thumbnailFileName = await fileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
-        queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
+        if (forVideo) {
+            string? thumbnailFileName = await fileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
+            queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
+        }
 
         context.Queues.Add(queue);
         await context.SaveChangesAsync();
