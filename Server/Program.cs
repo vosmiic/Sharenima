@@ -11,6 +11,7 @@ using Sharenima.Server;
 using Sharenima.Server.Data;
 using Sharenima.Server.Handlers;
 using Sharenima.Server.Models;
+using Sharenima.Server.Services;
 using Sharenima.Server.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,6 +56,7 @@ builder.Logging.AddProvider(new ConsoleLoggerProvider(new ConsoleLoggerConfigura
 }));
 
 builder.Services.AddSingleton<ConnectionMapping>();
+builder.Services.AddSingleton<InstanceTimeTracker>();
 
 builder.Services.AddScoped<IAuthorizationHandler, ChangeProgressHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, UploadVideoHandler>();

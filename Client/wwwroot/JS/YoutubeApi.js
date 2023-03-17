@@ -68,7 +68,8 @@ setInterval(function () {
         var currentTime = getCurrentTime();
         if (currentTime && player.getPlayerState() !== 0) {
             if (!initialLoad) {
-                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2);
+                let playerPlaybackRate = player.getPlaybackRate();
+                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2 && playerPlaybackRate === 1);
                 lastUpdateTime = currentTime;
             }
             initialLoad = false;
