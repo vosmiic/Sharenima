@@ -9,9 +9,15 @@
             break;
         case VideoType.FileUpload:
             <div id="fileUploadContainer" class="playerContainer">
-                <video id="mediaPlayer" controls>
-                    <source src="@Video.Url" type="@Video.MediaType"/>
-                </video>
+                @if (Video.MediaType.StartsWith("video")) {
+                    <video id="mediaPlayer" controls>
+                        <source src="@Video.Url" type="@Video.MediaType"/>
+                    </video>
+                } else if (Video.MediaType.StartsWith("audio")) {
+                    <audio id="mediaPlayer" controls>
+                        <source src="@Video.Url" type="@Video.MediaType"/>
+                    </audio>
+                }
             </div>
             break;
     }
