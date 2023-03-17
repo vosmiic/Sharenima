@@ -1,4 +1,4 @@
-namespace Sharenima.Server.SignalR;
+namespace Sharenima.Server.Services;
 
 public class ConnectionMapping {
     private readonly Dictionary<Guid, List<InstanceConnection>> _instanceConnections = 
@@ -8,6 +8,14 @@ public class ConnectionMapping {
         return _instanceConnections.TryGetValue(instanceId, out List<InstanceConnection> connections) ? connections.Count : 0;
     }
 
+    /// <summary>
+    /// Adds the user to the connection mapping.
+    /// </summary>
+    /// <param name="instanceId">Instance ID.</param>
+    /// <param name="connectionId">User connection ID.</param>
+    /// <param name="userId">User ID.</param>
+    /// <param name="userName">User name.</param>
+    /// <returns>True if the user is the leader.</returns>
     public void Add(Guid instanceId, string connectionId, Guid? userId = null, string? userName = null) {
         KeyValuePair<Guid, List<InstanceConnection>>? instanceConnections;
         lock (_instanceConnections) {
@@ -20,18 +28,25 @@ public class ConnectionMapping {
                     new() {
                         ConnectionId = connectionId,
                         UserId = userId,
-                        UserName = userName
+                        UserName = userName,
+                        IsLeader = true
                     }
                 });
             }
-        } else if (instanceConnections.Value.Value.FirstOrDefault(ic => ic.ConnectionId == connectionId && ic.UserId == userId) == null) {
+            return;
+        }
+
+        InstanceConnection? existingConnection = instanceConnections.Value.Value.FirstOrDefault(ic => ic.ConnectionId == connectionId && ic.UserId == userId);
+        if (existingConnection == null) {
             lock (_instanceConnections) {
                 instanceConnections.Value.Value.Add(new InstanceConnection {
                     ConnectionId = connectionId,
                     UserId = userId,
-                    UserName = userName
+                    UserName = userName,
+                    IsLeader = instanceConnections.Value.Value.Count == 0
                 });
             }
+            return;
         }
     }
 
@@ -40,6 +55,8 @@ public class ConnectionMapping {
             return _instanceConnections;
         }
     }
+
+    public InstanceConnection? GetConnectionById(Guid instanceId, string connectionId) => _instanceConnections.FirstOrDefault(connections => connections.Key == instanceId).Value.FirstOrDefault(ic => ic.ConnectionId == connectionId);
 
     public void Remove(Guid instanceId, string connectionId, Guid? userId = null) {
         KeyValuePair<Guid, List<InstanceConnection>>? instanceConnections;
@@ -52,6 +69,9 @@ public class ConnectionMapping {
             if (instanceConnection != null) {
                 lock (_instanceConnections) {
                     instanceConnections.Value.Value.Remove(instanceConnection);
+                    if (instanceConnection.IsLeader && instanceConnections.Value.Value.Count > 0) {
+                        instanceConnections.Value.Value.First().IsLeader = true;
+                    }
                 }
             }
         }
@@ -61,5 +81,6 @@ public class ConnectionMapping {
         public Guid? UserId { get; set; }
         public string? UserName { get; set; }
         public string ConnectionId { get; set; }
+        public bool IsLeader {get;set;}
     }
 }
