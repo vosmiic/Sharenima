@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Sharenima.Server.Data;
 using Sharenima.Server.Helpers;
+using Sharenima.Server.Services;
 using Sharenima.Shared;
 using Sharenima.Shared.Configuration;
 
@@ -16,16 +17,16 @@ public class QueueHub : Hub {
     private readonly IDbContextFactory<ApplicationDbContext> _applicationDbContextFactory;
     private readonly ConnectionMapping _connectionMapping;
     private readonly ILogger<QueueHub> _logger;
-    private readonly IMemoryCache _memoryCache;
     private readonly IConfiguration _configuration;
+    private readonly InstanceTimeTracker _instanceTimeTracker;
 
-    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger, IMemoryCache memoryCache, IConfiguration configuration, IDbContextFactory<ApplicationDbContext> applicationDbContextFactory) {
+    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger, IMemoryCache memoryCache, IConfiguration configuration, IDbContextFactory<ApplicationDbContext> applicationDbContextFactory, InstanceTimeTracker instanceTimeTracker) {
         _contextFactory = contextFactory;
         _connectionMapping = connectionMapping;
         _logger = logger;
-        _memoryCache = memoryCache;
         _configuration = configuration;
         _applicationDbContextFactory = applicationDbContextFactory;
+        _instanceTimeTracker = instanceTimeTracker;
     }
 
     public override async Task OnConnectedAsync() {
@@ -35,13 +36,21 @@ public class QueueHub : Hub {
         if (httpContext == null) return;
         var instanceId = httpContext.Request.Query["instanceId"];
         if (instanceId.Count == 0) return;
+        Guid parsedInstanceId = Guid.Parse(instanceId[0]);
         string? username = null;
         if (Context.User?.IsAuthenticated() == true) {
             await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
             username = context.Users.FirstOrDefault(user => user.Id == userId)?.UserName;
         }
 
-        _connectionMapping.Add(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId, username);
+        if (_instanceTimeTracker.GetInstanceTime(parsedInstanceId) == null) {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == parsedInstanceId);
+            if (instance == null) return;
+            _instanceTimeTracker.Add(parsedInstanceId, instance.VideoTime);
+        }
+
+        _connectionMapping.Add(parsedInstanceId, Context.ConnectionId, parsedUserId, username);
         _logger.LogInformation($"Added {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} to instance {instanceId[0]} connection map");
         if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", parsedUserId.Value);
     }
@@ -94,20 +103,23 @@ public class QueueHub : Hub {
     }
 
     [Authorize(Policy = "ChangeProgress")]
-    public async Task SendProgressChange(string groupName, TimeSpan videoTime, bool seeked, Guid? videoId) {
-        if (seeked ||
-            (!_memoryCache.TryGetValue($"lastUpdate-{groupName}", out DateTime lastUpdate) &&
-             DateTime.UtcNow > lastUpdate.AddMilliseconds(300))) {
-            _memoryCache.Set($"lastUpdate-{groupName}", DateTime.UtcNow, TimeSpan.FromSeconds(2));
+    public async Task SendProgressChange(Guid groupName, TimeSpan videoTime, bool seeked, Guid? videoId) {
+        ConnectionMapping.InstanceConnection? instanceConnection = _connectionMapping.GetConnectionById(groupName, Context.ConnectionId);
+        double? storedInstanceTimeDifference = _instanceTimeTracker.GetInstanceTime(groupName)?.TotalMilliseconds - videoTime.TotalMilliseconds;
+        if ((!seeked && instanceConnection is { IsLeader: true } && storedInstanceTimeDifference is not (> 1000 or < -1000))
+            || seeked) {
             await using var context = await _contextFactory.CreateDbContextAsync();
             if (videoId == null || context.Queues.FirstOrDefault(queue => queue.Id == videoId) == null) return;
-            Guid parsedGroupName;
-            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => Guid.TryParse(groupName, out parsedGroupName) && instance.Id == parsedGroupName && instance.PlayerState != State.Ended);
+            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == groupName && instance.PlayerState != State.Ended);
             if (instance == null) return;
             instance.VideoTime = videoTime;
+            _instanceTimeTracker.Update(instance.Id, videoTime, true);
             await context.SaveChangesAsync();
 
-            await Clients.Group(groupName).SendAsync("ReceiveProgressChange", videoTime);
+            await Clients.Group(groupName.ToString()).SendAsync("ReceiveProgressChange", videoTime);
+        } else {
+            // something weird is happening, rewind the user
+            await Clients.Caller.SendAsync("ReceiveProgressChange", _instanceTimeTracker.GetInstanceTime(groupName));
         }
     }
 
