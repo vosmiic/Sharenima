@@ -13,10 +13,11 @@ public class ConnectionMapping {
     /// </summary>
     /// <param name="instanceId">Instance ID.</param>
     /// <param name="connectionId">User connection ID.</param>
+    /// <param name="leaderRank">Leader rank.</param>
     /// <param name="userId">User ID.</param>
     /// <param name="userName">User name.</param>
     /// <returns>True if the user is the leader.</returns>
-    public void Add(Guid instanceId, string connectionId, Guid? userId = null, string? userName = null) {
+    public void Add(Guid instanceId, string connectionId, int leaderRank, Guid? userId = null, string? userName = null) {
         KeyValuePair<Guid, List<InstanceConnection>>? instanceConnections;
         lock (_instanceConnections) {
             instanceConnections = _instanceConnections.FirstOrDefault(ic => ic.Key == instanceId);
@@ -29,7 +30,8 @@ public class ConnectionMapping {
                         ConnectionId = connectionId,
                         UserId = userId,
                         UserName = userName,
-                        IsLeader = true
+                        IsLeader = true,
+                        LeaderRank = leaderRank
                     }
                 });
             }
@@ -38,13 +40,24 @@ public class ConnectionMapping {
 
         InstanceConnection? existingConnection = instanceConnections.Value.Value.FirstOrDefault(ic => ic.ConnectionId == connectionId && ic.UserId == userId);
         if (existingConnection == null) {
+            InstanceConnection newConnection = new InstanceConnection {
+                ConnectionId = connectionId,
+                UserId = userId,
+                UserName = userName,
+                IsLeader = instanceConnections.Value.Value.Count == 0 || instanceConnections.Value.Value.Any(connection => connection.IsLeader && connection.LeaderRank < leaderRank),
+                LeaderRank = leaderRank
+            };
+            InstanceConnection? oldLeader = null;
+            if (newConnection.IsLeader) {
+                oldLeader = instanceConnections.Value.Value.FirstOrDefault(connection => connection.IsLeader);
+            }
             lock (_instanceConnections) {
-                instanceConnections.Value.Value.Add(new InstanceConnection {
-                    ConnectionId = connectionId,
-                    UserId = userId,
-                    UserName = userName,
-                    IsLeader = instanceConnections.Value.Value.Count == 0
-                });
+                if (oldLeader != null) {
+                    instanceConnections.Value.Value.Remove(oldLeader);
+                    oldLeader.IsLeader = false;
+                    instanceConnections.Value.Value.Add(oldLeader);
+                }
+                instanceConnections.Value.Value.Add(newConnection);
             }
             return;
         }
@@ -82,5 +95,6 @@ public class ConnectionMapping {
         public string? UserName { get; set; }
         public string ConnectionId { get; set; }
         public bool IsLeader {get;set;}
+        public int LeaderRank { get; set; }
     }
 }

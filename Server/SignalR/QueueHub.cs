@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Sharenima.Server.Data;
 using Sharenima.Server.Helpers;
+using Sharenima.Server.Models;
 using Sharenima.Server.Services;
 using Sharenima.Shared;
 using Sharenima.Shared.Configuration;
@@ -38,9 +39,13 @@ public class QueueHub : Hub {
         if (instanceId.Count == 0) return;
         Guid parsedInstanceId = Guid.Parse(instanceId[0]);
         string? username = null;
+        int leaderRank = 0;
         if (Context.User?.IsAuthenticated() == true) {
             await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
-            username = context.Users.FirstOrDefault(user => user.Id == userId)?.UserName;
+            ApplicationUser? user = context.Users.Include(au => au.Roles).FirstOrDefault(user => user.Id == userId);
+            if (user == null) return;
+            username = user.UserName;
+            leaderRank = user.Roles.Any(role => role.InstanceId == parsedInstanceId && role.Permission == Permissions.Permission.Administrator) ? 2 : 1;
         }
 
         if (_instanceTimeTracker.GetInstanceTime(parsedInstanceId) == null) {
@@ -50,7 +55,7 @@ public class QueueHub : Hub {
             _instanceTimeTracker.Add(parsedInstanceId, instance.VideoTime);
         }
 
-        _connectionMapping.Add(parsedInstanceId, Context.ConnectionId, parsedUserId, username);
+        _connectionMapping.Add(parsedInstanceId, Context.ConnectionId, leaderRank, parsedUserId, username);
         _logger.LogInformation($"Added {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} to instance {instanceId[0]} connection map");
         if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", parsedUserId.Value);
     }
