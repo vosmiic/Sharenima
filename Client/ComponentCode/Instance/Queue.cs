@@ -25,6 +25,7 @@ public partial class Queue : ComponentBase {
     public string VideoUrl { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     private HttpClient? _authHttpClient { get; set; }
+    private HttpClient? _uploadHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
     protected bool Authenticated { get; set; }
     protected List<Sharenima.Shared.Queue> QueueList { get; set; } = new List<Sharenima.Shared.Queue>();
@@ -60,9 +61,13 @@ public partial class Queue : ComponentBase {
     }
 
     protected async void UploadVideoToQueueNew(InputFileChangeEventArgs e) {
-        if (_authHttpClient == null) return;
-        //todo handle above
-        _authHttpClient.Timeout = TimeSpan.FromHours(1);
+        if (_uploadHttpClient == null) {
+            var authState = await authenticationStateTask;
+            if (authState.User.Identity is { IsAuthenticated: false }) return;
+            _uploadHttpClient = HttpClientFactory.CreateClient("auth");
+            _uploadHttpClient.Timeout = TimeSpan.FromHours(1);
+        }
+
         // gives the user and hour to upload a file, any longer and an error is returned
         using var content = new MultipartFormDataContent();
         content.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data");
@@ -77,9 +82,8 @@ public partial class Queue : ComponentBase {
             _toaster.Add($"Couldn't upload file: {exception.Message}", MatToastType.Danger, "Upload Error");
             return;
         }
-        Console.WriteLine(content.FirstOrDefault());
         _toaster.Add($"Uploading file...", MatToastType.Info, "Upload");
-        var uploadVideoResponse = await _authHttpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}&connectionId={HubConnection?.ConnectionId}", content);
+        var uploadVideoResponse = await _uploadHttpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}&connectionId={HubConnection?.ConnectionId}", content);
         if (!uploadVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not upload video; {uploadVideoResponse.ReasonPhrase}", MatToastType.Danger, "Upload Error");
         }
