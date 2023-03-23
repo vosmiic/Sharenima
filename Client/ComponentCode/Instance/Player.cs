@@ -35,6 +35,8 @@ public partial class Player : ComponentBase {
             playerState = (State)value;
             Console.WriteLine($"State changed: {playerState}");
             HubConnection.SendAsync("SendStateChange", InstanceId, playerState, Video.Id);
+            if (value is 0)
+                Console.WriteLine($"sent video {Video.Id} has ended alert");
         }
     }
 
@@ -168,10 +170,12 @@ public partial class Player : ComponentBase {
             }
         });
 
-        HubConnection.On<TimeSpan>("ReceiveProgressChange", async (newTime) => {
-            var difference = newTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
-            if (difference is > 700 or < -700)
-                await SendProgressChange(newTime.TotalSeconds, Video?.Id);
+        HubConnection.On<TimeSpan, Guid?>("ReceiveProgressChange", async (newTime, videoId) => {
+            if (Video?.Id == videoId) {
+                var difference = newTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
+                if (difference is > 700 or < -700)
+                    await SendProgressChange(newTime.TotalSeconds, Video?.Id);
+            }
         });
     }
 

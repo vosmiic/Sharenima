@@ -121,7 +121,7 @@ public class QueueHub : Hub {
             _instanceTimeTracker.Update(instance.Id, videoTime, true);
             await context.SaveChangesAsync();
 
-            await Clients.Group(groupName.ToString()).SendAsync("ReceiveProgressChange", videoTime);
+            await Clients.Group(groupName.ToString()).SendAsync("ReceiveProgressChange", videoTime, videoId);
         } else {
             // something weird is happening, rewind the user
             await Clients.Caller.SendAsync("ReceiveProgressChange", _instanceTimeTracker.GetInstanceTime(groupName));
