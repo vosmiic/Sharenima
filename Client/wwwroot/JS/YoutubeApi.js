@@ -116,7 +116,7 @@ function changeYTVideoSource(videoId) {
 }
 
 function youtubeStateChange(event) {
-    dotNetHelper.invokeMethodAsync('StateChange', event.data);
+    dotNetHelper.invokeMethodAsync('StateChange', event.data, comparisonVideoId);
 }
 
 function youtubeDestroy() {

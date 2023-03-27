@@ -30,8 +30,8 @@ public partial class Player : ComponentBase {
     private HttpClient _anonymousHttpClient { get; set; }
 
     [JSInvokable]
-    public void StateChange(int value) {
-        if (value is > -1 and < 3 && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
+    public void StateChange(int value, Guid videoId) {
+        if (videoId == Video?.Id && value is > -1 and < 3 && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
             playerState = (State)value;
             Console.WriteLine($"State changed: {playerState}");
             HubConnection.SendAsync("SendStateChange", InstanceId, playerState, Video.Id);
@@ -113,10 +113,10 @@ public partial class Player : ComponentBase {
     private async Task EndVideo(CancellationToken cancellationToken) {
         _videoReady = false;
         if (Video?.VideoType == VideoType.YouTube &&
-            QueuePlayerService.CurrentQueue.FirstOrDefault(queue => queue.Order == Video?.Order + 1)?.VideoType != VideoType.YouTube) {
+            QueuePlayerService.GetCurrentQueue()?.VideoType != VideoType.YouTube) {
             await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
         } else if (Video?.VideoType == VideoType.FileUpload &&
-                   QueuePlayerService.CurrentQueue.FirstOrDefault(queue => queue.Order == Video?.Order + 1)?.VideoType != VideoType.FileUpload) {
+                   QueuePlayerService.GetCurrentQueue()?.VideoType != VideoType.FileUpload) {
             await _jsRuntime.InvokeVoidAsync("destroyVideoElement");
         }
 

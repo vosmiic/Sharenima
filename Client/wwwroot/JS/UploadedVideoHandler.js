@@ -53,7 +53,7 @@ function loadVideoFunctions(autoplay, currentVideoId) {
 }
 
 function uploadedVideoStateChange(state) {
-    dotNetHelper.invokeMethodAsync('StateChange', state);
+    dotNetHelper.invokeMethodAsync('StateChange', state, videoId);
 }
 
 function updateBackendProgress() {
