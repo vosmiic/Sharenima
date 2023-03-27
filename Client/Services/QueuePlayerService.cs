@@ -11,10 +11,19 @@ public class QueuePlayerService
 
     public void RemoveFromQueue(Queue removedQueue) {
         CurrentQueue.Remove(removedQueue);
-        CurrentQueue.Where(queue => queue.Order > removedQueue.Order).ToList().ForEach(queue => queue.Order--);
+        var instanceQueue = CurrentQueue.Where(queue => queue.Order > removedQueue.Order).ToList();
+        foreach (Queue queue in instanceQueue) {
+            Console.WriteLine(queue.Name);
+            queue.Order--;
+        }
+        SetQueue(CurrentQueue.Union(instanceQueue).ToList());
     }
 
+    public Queue? GetNextInQueue() => CurrentQueue.FirstOrDefault(queue => queue.Order == 1);
+
+    public Queue? GetCurrentQueue() => CurrentQueue.MinBy(queue => queue.Order);
+
     public void SetQueue(List<Queue> queues) {
-        CurrentQueue = queues;
+        CurrentQueue = queues.OrderBy(queue => queue.Order).ToList();
     }
 }
