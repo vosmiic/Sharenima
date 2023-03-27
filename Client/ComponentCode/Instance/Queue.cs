@@ -122,12 +122,7 @@ public partial class Queue : ComponentBase {
 
         if (!removeVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not remove video; {removeVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
-        } else {
-            if (QueuePlayerService.CurrentQueue.FirstOrDefault() == null || QueuePlayerService.CurrentQueue.FirstOrDefault()?.Id == queueId) {
-                await RefreshService.CallPlayerVideoEnded();
-                await RefreshService.CallPlayerRefreshRequested();
-            }
-        }
+        } 
     }
 
     private async Task GetQueue() {
@@ -185,6 +180,10 @@ public partial class Queue : ComponentBase {
                 } else {
                     QueuePlayerService.RemoveFromQueue(queue);
                     SetList();
+                    if (QueuePlayerService.CurrentQueue?.FirstOrDefault() == null || QueuePlayerService.CurrentQueue.FirstOrDefault()?.Id == queueId) {
+                        await RefreshService.CallPlayerVideoEnded();
+                        await RefreshService.CallPlayerRefreshRequested();
+                    }
                     StateHasChanged();
                 }
             }
@@ -200,7 +199,6 @@ public partial class Queue : ComponentBase {
         HubConnection.On<List<Sharenima.Shared.Queue>>("QueueOrderChange", (queueList) => {
             QueueList = queueList.OrderBy(queue => queue.Order).ToList();
             QueuePlayerService.SetQueue(QueueList);
-            QueuePlayerService.CurrentQueue.OrderBy(queue => queue.Order).ToList().ForEach(queue => Console.WriteLine(queue.Name));
             StateHasChanged();
         });
     }
@@ -211,10 +209,10 @@ public partial class Queue : ComponentBase {
     }
 
     private async Task RunNextVideo(Sharenima.Shared.Queue queue) {
-        await RefreshService.CallPlayerVideoEnded();
         QueuePlayerService.RemoveFromQueue(queue);
-        await RefreshService.CallPlayerRefreshRequested();
         SetList();
+        await RefreshService.CallPlayerVideoEnded();
+        await RefreshService.CallPlayerRefreshRequested();
         StateHasChanged();
     }
 }
