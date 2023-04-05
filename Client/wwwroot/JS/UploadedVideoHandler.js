@@ -4,75 +4,93 @@ function setDotNetHelper(value) {
     dotNetHelper = value;
 }
 
-let video;
+let uploadedPlayer;
 let lastExecution = new Date();
-let videoPlaying;
 let videoId;
+let ready = false;
+let lastUpdate = 0;
 
-function loadVideoFunctions(autoplay, currentVideoId) {
-    video = document.querySelector('#mediaPlayer');
+function loadVideoFunctions(autoplay, currentVideoId, type, url) {
+    uploadedPlayer = OvenPlayer.create('mediaPlayer', getSource(type, url));
     videoId = currentVideoId;
 
-    video.addEventListener('play', function () {
-        videoPlaying = true;
-        uploadedVideoStateChange(1);
-    });
-
-    video.addEventListener('pause', function () {
-        videoPlaying = false;
-        if (video.readyState === 4) {
-            console.log("pause")
-            uploadedVideoStateChange(2);
-        }
-    });
+    uploadedPlayer.on('stateChanged', function (event) {
+        switch (event.newstate) {
+            case "playing":
+                onPlay();
+                break;
+            case "paused":
+                onPause();
+                break;
+            case "complete":
+                onComplete();
+                break;
+                
+        } 
+    })
     
-    video.addEventListener('ended', function () {
-        videoPlaying = false;
-        uploadedVideoStateChange(0)
-    });
-    
-    video.addEventListener('seeked', function () {
+    let seekPosition;
+    uploadedPlayer.on('seek', function (event) {
+        seekPosition = event.position;
+    })
+    uploadedPlayer.on('seeked', function () {
         if (new Date() - lastExecution >= 100) {
-            updateBackendProgress();
+            updateBackendProgress(seekPosition);
         }
     });
     
-    video.addEventListener('loadedmetadata', function () {
+    uploadedPlayer.on('ready', function () {
         dotNetHelper.invokeMethodAsync('RequestStoredVideoTime').then((time) => {
-            video.currentTime = time;
+            uploadedPlayer.seek(time);
         });
+        if (autoplay) {
+            playFileUpload();
+        }
         dotNetHelper.invokeMethodAsync('SetReady', true);
+        ready = true;
     });
     
-    if (autoplay) {
-        video.play().catch(() => {
-            video.muted = true;
-            video.play();
-        })
-    }
+    uploadedPlayer.on('time', function (event) {
+        let difference = lastUpdate - event.position;
+        if (ready && uploadedPlayer.getState() !== "paused" && (difference >= 0.5 || difference <= -0.5)) {
+            lastUpdate = event.position;
+            updateServerTime(event.position);
+        }
+    });
+}
+
+function onPlay() {
+    uploadedVideoStateChange(1);
+}
+
+function onPause() {
+    uploadedVideoStateChange(2);
+}
+
+function onComplete() {
+    uploadedVideoStateChange(0);
+    ready = false;
+    lastUpdate = 0;
 }
 
 function uploadedVideoStateChange(state) {
     dotNetHelper.invokeMethodAsync('StateChange', state, videoId);
 }
 
-function updateBackendProgress() {
-    dotNetHelper.invokeMethodAsync('ProgressChange', videoId, video.currentTime, true);
+function updateBackendProgress(time) {
+    dotNetHelper.invokeMethodAsync('ProgressChange', videoId, time, true);
     lastExecution = new Date();
 }
 
 function playFileUpload() {
-    if (video.paused && !videoPlaying) {
-        video.play().catch(() => {
-            video.muted = true;
-            video.play();
-        });
+    if (uploadedPlayer.getState() === "paused" || uploadedPlayer.getState() === "idle") {
+        playVideo();
     }
 }
 
 function pauseFileUpload() {
-    if (!video.paused && videoPlaying) {
-        video.pause();
+    if (uploadedPlayer.getState() !== "paused" || uploadedPlayer.getState() !== "idle") {
+        uploadedPlayer.pause();
     }
 }
 
@@ -80,7 +98,7 @@ function setCurrentUploadedVideoTime(time, currentVideoId) {
     if (currentVideoId === videoId) {
         let success = true;
         try {
-            video.currentTime = time;
+            uploadedPlayer.seek(time);
         } catch (e) {
             success = false;
         }
@@ -93,19 +111,38 @@ function destroyVideoElement() {
     document.getElementById("fileUploadContainer").textContent = '';
 }
 
-function changeUploadedVideoSource(newSource, autoPlay) {
-    video.pause();
-    video.src = newSource;
+function changeUploadedVideoSource(newSource, type, autoPlay) {
+    uploadedPlayer.pause();
+    uploadedPlayer.load(getSource(type, newSource));
     if (autoPlay) {
-        video.play();
+        playFileUpload();
     }
 }
 
-setInterval(function () {
-    if (typeof video !== 'undefined' && video !== 'undefined' && !video.ended && typeof videoId === 'string') {
-        var currentTime = video.currentTime;
-        if (currentTime) {
-            dotNetHelper.invokeMethodAsync('ProgressChange', videoId, currentTime, false);
-        }
+function updateServerTime(time) {
+    if (uploadedPlayer.getState() !== "complete" && typeof videoId === 'string') {
+        dotNetHelper.invokeMethodAsync('ProgressChange', videoId, time, false);
     }
-}, 500)
+}
+
+function getSource(type, url) {
+    return {
+        sources: [{
+            label: type.startsWith("video") ? "video" : "audio",
+            type: type,
+            file: url
+        }]
+    }
+}
+
+function playVideo() {
+    uploadedPlayer.play();
+    let checkIfPLayingInterval = setInterval(function () {
+        if (uploadedPlayer.getState() === "paused" || uploadedPlayer.getState() === "idle") {
+            uploadedPlayer.setMute(true);
+            uploadedPlayer.play();
+        } else {
+            clearInterval(checkIfPLayingInterval);
+        }
+    }, 50);
+}

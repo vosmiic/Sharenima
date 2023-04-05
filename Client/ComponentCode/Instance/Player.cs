@@ -51,7 +51,7 @@ public partial class Player : ComponentBase {
 
             TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
             var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
-            if (difference is > 300 or < -300) {
+            if (difference is > 300 or < -300 || seeked) {
                 HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime, seeked, Video?.Id);
                 VideoTime = newVideoTime;
             }
@@ -102,7 +102,7 @@ public partial class Player : ComponentBase {
             if (Video?.VideoType == VideoType.YouTube)
                 await _jsRuntime.InvokeVoidAsync("changeYTVideoSource", RequestVideo());
             if (Video?.VideoType == VideoType.FileUpload)
-                await _jsRuntime.InvokeVoidAsync("changeUploadedVideoSource", Video.Url, playerState is State.Ended or State.Playing);
+                await _jsRuntime.InvokeVoidAsync("changeUploadedVideoSource", Video.Url, Video.MediaType, playerState is State.Ended or State.Playing);
         } else {
             StateHasChanged();
         }
@@ -130,7 +130,7 @@ public partial class Player : ComponentBase {
                     await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo(), InitialState is State.Playing, Video.Id);
                     break;
                 case VideoType.FileUpload:
-                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing, Video.Id);
+                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing, Video.Id, Video.MediaType, Video.Url);
                     break;
             }
         } else if (StreamUrl != null) {

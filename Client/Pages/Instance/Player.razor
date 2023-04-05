@@ -10,9 +10,9 @@
         case VideoType.FileUpload:
             <div id="fileUploadContainer" class="playerContainer">
                 @if (Video.MediaType.StartsWith("video")) {
-                    <video id="mediaPlayer" controls>
+                    <div id="mediaPlayer">
                         <source src="@Video.Url" type="@Video.MediaType"/>
-                    </video>
+                    </div>
                 } else if (Video.MediaType.StartsWith("audio")) {
                     <audio id="mediaPlayer" controls>
                         <source src="@Video.Url" type="@Video.MediaType"/>
