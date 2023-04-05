@@ -94,6 +94,7 @@ public class QueueHub : Hub {
 
                 if (instance != null) {
                     instance.VideoTime = TimeSpan.Zero;
+                    _instanceTimeTracker.Update(instance.Id, TimeSpan.Zero, true);
                 }
             }
 
