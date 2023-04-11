@@ -60,7 +60,7 @@ public partial class Queue : ComponentBase {
         }
     }
 
-    protected async void UploadVideoToQueueNew(InputFileChangeEventArgs e) {
+    protected async void UploadVideoToQueue(InputFileChangeEventArgs e) {
         if (_uploadHttpClient == null) {
             var authState = await authenticationStateTask;
             if (authState.User.Identity is { IsAuthenticated: false }) return;
@@ -86,32 +86,6 @@ public partial class Queue : ComponentBase {
         var uploadVideoResponse = await _uploadHttpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}&connectionId={HubConnection?.ConnectionId}", content);
         if (!uploadVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not upload video; {uploadVideoResponse.ReasonPhrase}", MatToastType.Danger, "Upload Error");
-        }
-    }
-
-    protected async void UploadVideoToQueue(IMatFileUploadEntry[] files) {
-        if (_authHttpClient == null) return;
-        //todo handle above
-        foreach (IMatFileUploadEntry matFileUploadEntry in files) {
-            if (!matFileUploadEntry.Type.StartsWith("video")) {
-                _toaster.Add("File is not a recognised video type", MatToastType.Danger, "Upload Error");
-                return;
-            }
-
-            var stream = new MemoryStream();
-            await matFileUploadEntry.WriteToStreamAsync(stream);
-            string base64File = Convert.ToBase64String(stream.ToArray());
-            File file = new File {
-                fileBase64 = base64File,
-                fileName = matFileUploadEntry.Name,
-                MediaType = matFileUploadEntry.Type
-            };
-            var uploadVideoResponse = await _authHttpClient.PostAsync($"queue/fileUpload?instanceId={InstanceId}&connectionId={HubConnection?.ConnectionId}", JsonConverters.ConvertObjectToHttpContent(file));
-
-
-            if (!uploadVideoResponse.IsSuccessStatusCode) {
-                _toaster.Add($"Could not upload video; {uploadVideoResponse.ReasonPhrase}", MatToastType.Danger, "Upload Error");
-            }
         }
     }
 

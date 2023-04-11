@@ -18,14 +18,11 @@
             Upload <MatIcon Icon="@MatIconNames.Attach_file"></MatIcon>
         </LabelContent>
         <ChildContent>
-            <InputFile OnChange="@UploadVideoToQueueNew"></InputFile>
-            <!--
-            <MatFileUpload OnChange="UploadVideoToQueue" Label="Drag and drop a video here or click here to select a local file"></MatFileUpload>
-            -->
+            <InputFile OnChange="@UploadVideoToQueue"></InputFile>
         </ChildContent>
     </MatTab>
 </MatTabGroup>
-<div class="container">
+<div class="container" style="max-height: 80vh; overflow: auto">
     @if (QueueList?.Count == 0) {
         <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
     } else {
