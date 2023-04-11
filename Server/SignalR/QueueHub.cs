@@ -57,7 +57,7 @@ public class QueueHub : Hub {
 
         _connectionMapping.Add(parsedInstanceId, Context.ConnectionId, leaderRank, parsedUserId, username);
         _logger.LogInformation($"Added {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} to instance {instanceId[0]} connection map");
-        if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", parsedUserId.Value);
+        if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", username);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception) {
@@ -86,11 +86,12 @@ public class QueueHub : Hub {
             Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
             if (playerState == State.Ended) {
                 context.Remove(queue);
-                if (queue.VideoType == VideoType.FileUpload) {
-                    FileHelper.DeleteFile(queue.Url, _configuration, _logger);
-                    if (queue.Thumbnail != null)
-                        FileHelper.DeleteFile(queue.Thumbnail, _configuration, _logger);
-                }
+                if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Development")
+                    if (queue.VideoType == VideoType.FileUpload) {
+                        FileHelper.DeleteFile(queue.Url, _configuration, _logger);
+                        if (queue.Thumbnail != null)
+                            FileHelper.DeleteFile(queue.Thumbnail, _configuration, _logger);
+                    }
 
                 if (instance != null) {
                     instance.VideoTime = TimeSpan.Zero;
