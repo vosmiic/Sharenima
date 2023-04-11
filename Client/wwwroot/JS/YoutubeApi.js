@@ -9,7 +9,7 @@ function runYoutubeApi(videoId, playingState, dbVideoId) {
     setTimeout(() => {
         var existingTag = document.querySelector("script[src='https://www.youtube.com/iframe_api']");
         if (existingTag) {
-            onYouTubeIframeAPIReady();
+            changeYTVideoSource(videoId);
         } else {
             var tag = document.createElement('script');
 
@@ -48,6 +48,10 @@ function onYouTubeIframeAPIReady() {
 }
 
 function youtubeOnReady(event) {
+    dotNetHelper.invokeMethodAsync('RequestInitialVideoTime').then((time) => {
+        event.target.seekTo(time);
+    });
+    
     if (autoplay) {
         event.target.playVideo();
         setTimeout(() => {
@@ -66,7 +70,7 @@ let lastUpdateTime = null;
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
         var currentTime = getCurrentTime();
-        if (currentTime && player.getPlayerState() !== 0) {
+        if (currentTime && player.getPlayerState() !== 0 && player.getPlayerState() !== 2) {
             if (!initialLoad) {
                 let playerPlaybackRate = player.getPlaybackRate();
                 dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2 && playerPlaybackRate === 1);

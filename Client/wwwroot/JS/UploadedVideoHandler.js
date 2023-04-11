@@ -40,7 +40,7 @@ function loadVideoFunctions(autoplay, currentVideoId, type, url) {
     });
     
     uploadedPlayer.on('ready', function () {
-        dotNetHelper.invokeMethodAsync('RequestStoredVideoTime').then((time) => {
+        dotNetHelper.invokeMethodAsync('RequestInitialVideoTime').then((time) => {
             uploadedPlayer.seek(time);
         });
         if (autoplay) {
@@ -145,4 +145,8 @@ function playVideo() {
             clearInterval(checkIfPLayingInterval);
         }
     }, 50);
+}
+
+function uploadGetTime() {
+    return uploadedPlayer.getPosition();
 }
