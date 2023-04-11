@@ -44,17 +44,13 @@ public partial class Player : ComponentBase {
     public async void ProgressChange(Guid videoId, double newTime, bool seeked) {
         if (_videoReady && playerState != State.Ended && videoId == Video?.Id && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
             if (_initialVideoLoad) {
-                if (await SendProgressChange(VideoTime.TotalSeconds, Video?.Id))
+                if (await SendProgressChange(newTime, Video?.Id))
                     _initialVideoLoad = false;
                 return;
             }
 
             TimeSpan newVideoTime = TimeSpan.FromSeconds(newTime);
-            var difference = newVideoTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
-            if (difference is > 300 or < -300 || seeked) {
-                HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime, seeked, Video?.Id);
-                VideoTime = newVideoTime;
-            }
+            HubConnection.SendAsync("SendProgressChange", InstanceId, newVideoTime, seeked, Video?.Id);
         }
     }
 
@@ -77,8 +73,11 @@ public partial class Player : ComponentBase {
     /// </summary>
     /// <returns>Current video time.</returns>
     [JSInvokable]
-    public double RequestStoredVideoTime() =>
-        VideoTime.TotalSeconds;
+    public double RequestInitialVideoTime() {
+        var time = VideoTime.TotalSeconds;
+        VideoTime = TimeSpan.MinValue;
+        return time;
+    }
 
     [JSInvokable]
     public void SetReady(bool ready) => _videoReady = ready;
@@ -119,8 +118,6 @@ public partial class Player : ComponentBase {
                    QueuePlayerService.GetCurrentQueue()?.VideoType != VideoType.FileUpload) {
             await _jsRuntime.InvokeVoidAsync("destroyVideoElement");
         }
-
-        VideoTime = TimeSpan.Zero;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
@@ -172,8 +169,9 @@ public partial class Player : ComponentBase {
 
         HubConnection.On<TimeSpan, Guid?>("ReceiveProgressChange", async (newTime, videoId) => {
             if (Video?.Id == videoId) {
-                var difference = newTime.TotalMilliseconds - VideoTime.TotalMilliseconds;
-                if (difference is > 700 or < -700)
+                TimeSpan mediaTime = await GetMediaTime();
+                var difference = newTime.TotalMilliseconds - mediaTime.TotalMilliseconds;
+                if (difference is > 250 or < -250)
                     await SendProgressChange(newTime.TotalSeconds, Video?.Id);
             }
         });
@@ -211,5 +209,19 @@ public partial class Player : ComponentBase {
         StreamUrl = null;
         _initialVideoLoad = true;
         await NewVideo(new CancellationToken());
+    }
+
+    private async Task<TimeSpan> GetMediaTime() {
+        double time = 0;
+        switch (Video?.VideoType) {
+            case VideoType.YouTube:
+                time = await _jsRuntime.InvokeAsync<double>("getCurrentTime");
+                break;
+            case VideoType.FileUpload:
+                time = await _jsRuntime.InvokeAsync<double>("uploadGetTime");
+                break;
+        }
+
+        return TimeSpan.FromSeconds(time);
     }
 }
