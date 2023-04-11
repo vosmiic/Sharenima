@@ -4,18 +4,15 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 
-namespace Sharenima.Client.ComponentCode; 
+namespace Sharenima.Client.ComponentCode;
 
 public partial class Chat : ComponentBase {
-    [CascadingParameter]
-    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
     private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
-    [Inject]
-    private IHttpClientFactory HttpClientFactory { get; set; }
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
-    [Parameter]
-    public HubConnection? HubConnection { get; set; }
+    [Parameter] public HubConnection? HubConnection { get; set; }
     protected List<string>? UserList { get; set; }
 
     protected override async Task OnInitializedAsync() {
@@ -24,13 +21,14 @@ public partial class Chat : ComponentBase {
             _authHttpClient = HttpClientFactory.CreateClient("auth");
         _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
 
-        HubConnection.On<Guid>("UserJoined", (userId) => {
+        HubConnection.On<string>("UserJoined", (username) => {
             if (UserList != null) {
-                if (!UserList.Contains(userId.ToString())) UserList.Add(userId.ToString());
+                if (!UserList.Contains(username)) UserList.Add(username);
             } else {
                 UserList = new List<string>();
-                UserList.Add(userId.ToString());
+                UserList.Add(username);
             }
+
             StateHasChanged();
         });
 
@@ -41,6 +39,7 @@ public partial class Chat : ComponentBase {
                 UserList = new List<string>();
                 UserList.Remove(userId.ToString());
             }
+
             StateHasChanged();
         });
     }
