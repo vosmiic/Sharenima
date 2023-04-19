@@ -1,4 +1,5 @@
 @page "/Queue"
+@using Sharenima.Shared
 @inherits Sharenima.Client.ComponentCode.Queue
 
 <MatTabGroup>
@@ -18,7 +19,10 @@
             Upload <MatIcon Icon="@MatIconNames.Attach_file"></MatIcon>
         </LabelContent>
         <ChildContent>
-            <InputFile OnChange="@UploadVideoToQueue"></InputFile>
+            <div class="d-flex">
+                <InputFile style="padding-top: 12px" OnChange="@UploadVideoToQueue"></InputFile>
+                <MatIconButton OnClick="@AdvancedUploadSettingsButtonClicked" Icon="settings"></MatIconButton>
+            </div>
         </ChildContent>
     </MatTab>
 </MatTabGroup>
@@ -27,7 +31,7 @@
         <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
     } else {
         <div class="row row-cols-1">
-            <Dropzone Items="QueueList" TItem="Sharenima.Shared.Queue" OnItemDrop="OnDrop" Accepts="(dragged, target) => dragged?.Order != 0 && target?.Order != 0">
+            <Dropzone Items="QueueList" TItem="Sharenima.Shared.Queue.Queue" OnItemDrop="OnDrop" Accepts="(dragged, target) => dragged?.Order != 0 && target?.Order != 0">
                 <div class="col" @key="@context.Id">
                     <MatCard>
                         <MatCardContent>
@@ -43,3 +47,13 @@
         </div>
     }
 </div>
+
+<MatDialog @bind-IsOpen="@AdvancedUploadSettingsIsOpen">
+    <MatDialogTitle>Upload Advanced Settings</MatDialogTitle>
+    <MatDialogContent>
+        <div class="form">
+            <MatSlideToggle Id="@nameof(_uploadAdvancedSettings.KeepSubtitles)" Value="_uploadAdvancedSettings.KeepSubtitles" TValue="bool" ValueChanged="@(e => AdvancedSettingChanged(nameof(UploadAdvancedSettings.KeepSubtitles), e))"></MatSlideToggle>
+            <label class="form-check-label ps-2" for="@nameof(_uploadAdvancedSettings.KeepSubtitles)">Keep Subtitles During Conversion?</label>
+        </div>
+    </MatDialogContent>
+</MatDialog>
