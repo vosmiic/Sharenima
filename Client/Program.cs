@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using MatBlazor;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
@@ -45,5 +46,6 @@ builder.Services.AddMatToaster(config => {
     config.VisibleStateDuration = 3000;
 });
 builder.Services.AddBlazorDragDrop();
+builder.Services.AddBlazoredLocalStorage();
 
 await builder.Build().RunAsync();
