@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Sharenima.Shared;
+namespace Sharenima.Shared.Queue;
 
 public class Queue : Base {
     [ForeignKey("Instance")] public Guid InstanceId { get; set; }
@@ -11,6 +11,11 @@ public class Queue : Base {
     public string? Thumbnail { get; set; }
     public string? MediaType { get; set; }
     public int Order { get; set; }
+    private ICollection<QueueSubtitles> _subtitles;
+    public virtual ICollection<QueueSubtitles> Subtitles {
+        get => _subtitles ?? (_subtitles = new List<QueueSubtitles>());
+        set => _subtitles = value;
+    }
 }
 
 public enum VideoType {
