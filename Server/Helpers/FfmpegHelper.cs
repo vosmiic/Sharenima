@@ -53,6 +53,35 @@ public class FfmpegHelper {
         return true;
     }
 
+    public static async Task<(string? outputPath, string? error)> ExtractStreamToFile(ILogger logger, ISubtitleStream subtitleStream, string outputPath) {
+        // checking if file exists; appending counter to name if so
+        if (File.Exists(outputPath)) {
+            int counter = 1;
+            while (true) {
+                string newName = outputPath.Replace(".srt", $" ({counter}).srt");
+                if (File.Exists(newName)) {
+                    counter++;
+                } else {
+                    outputPath = newName;
+                    break;
+                }
+            }
+        }
+        
+        IConversion conversion = FFmpeg.Conversions.New()
+            .AddStream(subtitleStream)
+            .SetOutput(outputPath);
+
+        try {
+            await conversion.Start();
+        } catch (Exception e) {
+            logger.LogError($"Error converting media; {e.Message}");
+            return (null, e.Message);
+        }
+        
+        return (outputPath, null);
+    }
+
     public static async Task<IMediaInfo> GetFileMetadata(string filePath) {
         return await FFmpeg.GetMediaInfo(filePath);
     }
