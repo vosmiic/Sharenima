@@ -1,4 +1,5 @@
 using Sharenima.Shared;
+using Sharenima.Shared.Queue;
 
 namespace Sharenima.Client;
 

@@ -10,6 +10,7 @@ using Sharenima.Server.Models;
 using Sharenima.Server.Services;
 using Sharenima.Shared;
 using Sharenima.Shared.Configuration;
+using Sharenima.Shared.Queue;
 
 namespace Sharenima.Server.SignalR;
 

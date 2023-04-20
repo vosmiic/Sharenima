@@ -3,13 +3,13 @@ using System.Collections.ObjectModel;
 namespace Sharenima.Shared;
 
 public class Instance : Base {
-    private ICollection<Queue> videoQueues;
+    private ICollection<Queue.Queue> videoQueues;
     private ICollection<InstancePermission> permissions;
     public string Name { get; set; }
     public Guid CreateById { get; set; }
 
-    public ICollection<Queue> VideoQueue {
-        get => videoQueues ?? (videoQueues = new Collection<Queue>());
+    public ICollection<Queue.Queue> VideoQueue {
+        get => videoQueues ?? (videoQueues = new Collection<Queue.Queue>());
         protected set => videoQueues = value;
     }
 
