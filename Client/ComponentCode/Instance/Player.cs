@@ -4,8 +4,10 @@ using MatBlazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
+using Sharenima.Client.Models;
 using Sharenima.Shared;
 using Sharenima.Shared.Configuration;
+using Sharenima.Shared.Queue;
 
 namespace Sharenima.Client.ComponentCode;
 
@@ -21,7 +23,7 @@ public partial class Player : ComponentBase {
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public State? InitialState { get; set; }
     [Parameter] public TimeSpan VideoTime { get; set; }
-    protected Sharenima.Shared.Queue? Video { get; set; }
+    protected Sharenima.Shared.Queue.Queue? Video { get; set; }
     protected string? StreamUrl { get; set; }
     private State playerState { get; set; }
     private DotNetObjectReference<Player>? objRef;
@@ -101,7 +103,7 @@ public partial class Player : ComponentBase {
             if (Video?.VideoType == VideoType.YouTube)
                 await _jsRuntime.InvokeVoidAsync("changeYTVideoSource", RequestVideo());
             if (Video?.VideoType == VideoType.FileUpload)
-                await _jsRuntime.InvokeVoidAsync("changeUploadedVideoSource", Video.Url, Video.MediaType, playerState is State.Ended or State.Playing);
+                await _jsRuntime.InvokeVoidAsync("changeUploadedVideoSource", OvenPlayerMediaList.GenerateMediaListFromQueue(Video), playerState is State.Ended or State.Playing);
         } else {
             StateHasChanged();
         }
@@ -127,7 +129,7 @@ public partial class Player : ComponentBase {
                     await _jsRuntime.InvokeVoidAsync("runYoutubeApi", RequestVideo(), InitialState is State.Playing, Video.Id);
                     break;
                 case VideoType.FileUpload:
-                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing, Video.Id, Video.MediaType, Video.Url);
+                    await _jsRuntime.InvokeVoidAsync("loadVideoFunctions", InitialState is State.Playing, Video.Id, OvenPlayerMediaList.GenerateMediaListFromQueue(Video));
                     break;
             }
         } else if (StreamUrl != null) {
