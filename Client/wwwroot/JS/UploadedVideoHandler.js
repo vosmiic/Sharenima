@@ -10,8 +10,8 @@ let videoId;
 let ready = false;
 let lastUpdate = 0;
 
-function loadVideoFunctions(autoplay, currentVideoId, type, url) {
-    uploadedPlayer = OvenPlayer.create('mediaPlayer', getSource(type, url));
+function loadVideoFunctions(autoplay, currentVideoId, queue) {
+    uploadedPlayer = OvenPlayer.create('mediaPlayer', queue);
     videoId = currentVideoId;
 
     uploadedPlayer.on('stateChanged', function (event) {
@@ -111,9 +111,9 @@ function destroyVideoElement() {
     document.getElementById("fileUploadContainer").textContent = '';
 }
 
-function changeUploadedVideoSource(newSource, type, autoPlay) {
+function changeUploadedVideoSource(queue, autoPlay) {
     uploadedPlayer.pause();
-    uploadedPlayer.load(getSource(type, newSource));
+    uploadedPlayer.load(queue);
     if (autoPlay) {
         playFileUpload();
     }
