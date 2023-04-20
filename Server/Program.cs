@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -39,21 +40,19 @@ builder.Services.TryAddEnumerable(
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
-builder.Services.Configure<FormOptions>(x =>
-{
-    x.ValueCountLimit = int.MaxValue;
-});
+builder.Services.Configure<FormOptions>(x => { x.ValueCountLimit = int.MaxValue; });
 
-
-builder.Logging.ClearProviders();
-builder.Logging.AddProvider(new ConsoleLoggerProvider(new ConsoleLoggerConfiguration {
-    Colour = ConsoleColor.White,
-    LogLevel = LogLevel.Information
-}));
-builder.Logging.AddProvider(new ConsoleLoggerProvider(new ConsoleLoggerConfiguration {
-    Colour = ConsoleColor.Red,
-    LogLevel = LogLevel.Error
-}));
+if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Development") {
+    builder.Logging.ClearProviders();
+    builder.Logging.AddProvider(new ConsoleLoggerProvider(new ConsoleLoggerConfiguration {
+        Colour = ConsoleColor.White,
+        LogLevel = LogLevel.Information
+    }));
+    builder.Logging.AddProvider(new ConsoleLoggerProvider(new ConsoleLoggerConfiguration {
+        Colour = ConsoleColor.Red,
+        LogLevel = LogLevel.Error
+    }));
+}
 
 builder.Services.AddSingleton<ConnectionMapping>();
 builder.Services.AddSingleton<InstanceTimeTracker>();
@@ -103,7 +102,8 @@ using var scope = app.Services.CreateScope();
 GeneralDbContext context = scope.ServiceProvider.GetRequiredService<GeneralDbContext>();
 app.UseStaticFiles(new StaticFileOptions {
     FileProvider = new PhysicalFileProvider(context.Settings.FirstOrDefault(setting => setting.Key == SettingKey.DownloadLocation).Value),
-    RequestPath = "/files"
+    RequestPath = "/files",
+    ServeUnknownFileTypes = true // todo fine for dev, not prod
 });
 
 app.UseRouting();
