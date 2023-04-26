@@ -21,7 +21,7 @@ public class StreamController : ControllerBase {
     }
 
     [HttpGet]
-    public async Task<ActionResult> Index(string? userName = null) {
+    public async Task<ActionResult> Index(string? userName = null, bool browserStreaming = false) {
         await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
         ApplicationUser? user = null;
         if (userName != null) {
@@ -30,7 +30,7 @@ public class StreamController : ControllerBase {
         }
 
         string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        Shared.Stream? streamDetails = await StreamHelper.GetStreamDetails(_configuration, _logger, user?.Id ?? userId, context, true);
+        Shared.Stream? streamDetails = await StreamHelper.GetStreamDetails(_configuration, _logger, user?.Id ?? userId, context, true, browserStreaming);
 
         if (streamDetails == null) return StatusCode(500);
 
@@ -54,7 +54,7 @@ public class StreamController : ControllerBase {
             _logger.LogError("Stream incorrectly setup; BasePlayUrl either missing or {{User}} is missing");
             return StatusCode(500);
         }
-        
+
         if (streamKey == null) {
             _logger.LogError("Stream incorrectly setup; Key missing");
             return StatusCode(500);

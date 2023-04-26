@@ -10,12 +10,18 @@ using Stream = Sharenima.Shared.Stream;
 namespace Sharenima.Server.Helpers;
 
 public class StreamHelper {
-    public static async Task<Stream?> GetStreamDetails(IConfiguration configuration, ILogger logger, string? userId, ApplicationDbContext context, bool createIfNotExist = false) {
+    public static async Task<Stream?> GetStreamDetails(IConfiguration configuration, ILogger logger, string? userId, ApplicationDbContext context, bool createIfNotExist = false, bool browserStreaming = false) {
         string? baseStreamUrl = configuration["Stream:BaseStreamUrl"];
+        string? wssBaseStreamUrl = configuration["Stream:WssBaseStreamUrl"];
         string? basePlayUrl = configuration["Stream:BasePlayUrl"];
         string? streamKey = configuration["Stream:Key"];
-        if (baseStreamUrl == null || !baseStreamUrl.Contains("{User}")) {
+        if (!browserStreaming && (baseStreamUrl == null || !baseStreamUrl.Contains("{User}"))) {
             logger.LogError("Stream incorrectly setup; BaseStreamUrl either missing or {{User}} is missing");
+            return null;
+        }
+
+        if (browserStreaming && (wssBaseStreamUrl == null || !wssBaseStreamUrl.Contains("{User}"))) {
+            logger.LogError("Stream incorrectly setup; WssBaseStreamUrl missing");
             return null;
         }
 
@@ -30,39 +36,37 @@ public class StreamHelper {
         }
 
         ApplicationUser? user = await context.Users.FirstOrDefaultAsync(user => user.Id == userId);
+        string playUrl = basePlayUrl.Replace("{User}", user?.UserName);
 
         if (user == null) return null;
         Stream? newlyGeneratedStreamDetails = null;
-        if (createIfNotExist && user.StreamKey == null) {
-            newlyGeneratedStreamDetails = await GenerateStreamDetails(baseStreamUrl, user.UserName, configuration["Stream:Key"]);
-            newlyGeneratedStreamDetails.PlayUrl = basePlayUrl.Replace("{User}", user?.UserName);
-            return newlyGeneratedStreamDetails;
+        if (browserStreaming) {
+            Stream streamDetails = await GenerateStreamDetails(wssBaseStreamUrl.Replace("{User}", user.UserName), user.UserName, streamKey, "direction=send&transport=tcp");
+            return new Shared.Stream {
+                StreamServer = $"{wssBaseStreamUrl.Replace("{User}", String.Empty)}{streamDetails.StreamKey}&direction=send&transport=tcp",
+                StreamKey = user?.StreamKey,
+                PlayUrl = playUrl
+            };
         }
 
-        string refinedServerUrl = baseStreamUrl.Replace("{User}", "");
-        if (refinedServerUrl.EndsWith("/"))
-            refinedServerUrl = refinedServerUrl.Remove(refinedServerUrl.Length - 1, 1);
-        return new Shared.Stream {
-            StreamServer = refinedServerUrl,
-            StreamKey = user?.StreamKey,
-            PlayUrl = basePlayUrl.Replace("{User}", user?.UserName)
-        };
+        var generatedStreamDetails = await GenerateStreamDetails(baseStreamUrl, user.UserName, streamKey);
+        generatedStreamDetails.PlayUrl = playUrl;
+        return generatedStreamDetails;
     }
 
-    public static async Task<Stream> GenerateStreamDetails(string baseStreamUrl, string username, string key) {
+    public static async Task<Stream> GenerateStreamDetails(string baseStreamUrl, string username, string key, string? additionalParameters = null) {
+        string encodedPolicy = GetEncodedPolicy();
         string hashedStringUrl = baseStreamUrl.Replace("{User}", username);
-        string toBeHashedUrl = $"{hashedStringUrl}?policy={GetEncodedPolicy()}";
-        HMACSHA1 hmacsha1 = new HMACSHA1(Encoding.UTF8.GetBytes(key).ToArray()); // old way "abc123"u8.ToArray()
+        string toBeHashedUrl = $"{hashedStringUrl}?policy={encodedPolicy}{(additionalParameters != null ? $"&{additionalParameters}" : String.Empty)}";
+        HMACSHA1 hmacsha1 = new HMACSHA1(Encoding.UTF8.GetBytes(key).ToArray());
         byte[] hash = hmacsha1.ComputeHash(new ASCIIEncoding().GetBytes(toBeHashedUrl));
-
-        string streamKey = $"{username}?policy={GetEncodedPolicy()}&signature={Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_')}";
-
+        
         string refinedServerUrl = baseStreamUrl.Replace("{User}", "");
         if (refinedServerUrl.EndsWith("/"))
             refinedServerUrl = refinedServerUrl.Remove(refinedServerUrl.Length - 1, 1);
 
         return new Stream {
-            StreamKey = streamKey,
+            StreamKey = $"{username}?policy={encodedPolicy}&signature={Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_')}",
             StreamServer = refinedServerUrl
         };
     }
