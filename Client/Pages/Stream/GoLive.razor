@@ -1,0 +1,10 @@
+@inherits Sharenima.Client.ComponentCode.Stream.GoLive
+<MatButton OnClick="GoLiveClicked" Class="@ButtonClass" Icon="fiber_manual_record">GO LIVE</MatButton>
+
+<MatDialog @bind-IsOpen="streamMediaSelectorDialogIsOpen">
+    <MatDialogTitle>Which media to stream?</MatDialogTitle>
+    <MatDialogContent>
+        <MatButton OnClick="() => OnMediaSelected(true)">Webcam/Mic</MatButton>
+        <MatButton OnClick="() => OnMediaSelected(false)">Desktop</MatButton>
+    </MatDialogContent>
+</MatDialog>
