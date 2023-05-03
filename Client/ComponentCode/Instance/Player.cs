@@ -111,14 +111,31 @@ public partial class Player : ComponentBase {
         StateHasChanged();
     }
 
-    private async Task EndVideo(CancellationToken cancellationToken) {
+    private Task EndVideo(CancellationToken cancellationToken) => EndVideo();
+
+    private async Task EndVideo(bool forceDestruction = false) {
         _videoReady = false;
         if (Video?.VideoType == VideoType.YouTube &&
-            QueuePlayerService.GetCurrentQueue()?.VideoType != VideoType.YouTube) {
+            (forceDestruction || QueuePlayerService.GetCurrentQueue()?.VideoType != VideoType.YouTube)) {
             await _jsRuntime.InvokeVoidAsync("youtubeDestroy");
         } else if (Video?.VideoType == VideoType.FileUpload &&
-                   QueuePlayerService.GetCurrentQueue()?.VideoType != VideoType.FileUpload) {
+                   (forceDestruction || QueuePlayerService.GetCurrentQueue()?.VideoType != VideoType.FileUpload)) {
             await _jsRuntime.InvokeVoidAsync("destroyVideoElement");
+        }
+    }
+
+    [JSInvokable]
+    public void OnPlayerError(string error, Guid videoId) {
+        if (Video?.VideoType == VideoType.YouTube) {
+            switch (Int32.Parse(error)) {
+                case 101:
+                case 150:
+                    _toaster.Add("Video cannot be played; video is non-embeddable", MatToastType.Danger, "Error");
+                    break;
+                default:
+                    _toaster.Add("Video cannot be played", MatToastType.Danger, "Error");
+                    break;
+            }
         }
     }
 
