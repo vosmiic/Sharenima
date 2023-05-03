@@ -7,9 +7,13 @@ function runYoutubeApi(videoId, playingState, dbVideoId) {
     comparisonVideoId = dbVideoId;
     autoplay = playingState;
     setTimeout(() => {
-        var existingTag = document.querySelector("script[src='https://www.youtube.com/iframe_api']");
+        let existingTag = document.querySelector("script[src='https://www.youtube.com/iframe_api']");
         if (existingTag) {
-            changeYTVideoSource(videoId);
+            if (player.getIframe().isConnected) {
+                changeYTVideoSource(videoId);
+            } else {
+                onYouTubeIframeAPIReady();
+            }
         } else {
             var tag = document.createElement('script');
 
@@ -42,7 +46,8 @@ function onYouTubeIframeAPIReady() {
         },
         events: {
             'onReady': youtubeOnReady,
-            'onStateChange': youtubeStateChange
+            'onStateChange': youtubeStateChange,
+            'onError': youtubeOnError
         }
     });
 }
@@ -62,6 +67,7 @@ function youtubeOnReady(event) {
             }
         }, 500);
     }
+    console.log("setting ready true")
     dotNetHelper.invokeMethodAsync('SetReady', true);
 }
 
@@ -116,7 +122,10 @@ function setCurrentYoutubeVideoTime(time, currentVideoId) {
 }
 
 function changeYTVideoSource(videoId) {
-    player.loadVideoById(videoId);
+    try {
+        player.loadVideoById(videoId);
+        dotNetHelper.invokeMethodAsync('SetReady', true);
+    } catch {}
 }
 
 function youtubeStateChange(event) {
@@ -125,4 +134,8 @@ function youtubeStateChange(event) {
 
 function youtubeDestroy() {
     document.getElementById("youtubeContainer").textContent = '';
+}
+
+function youtubeOnError(error) {
+    dotNetHelper.invokeMethodAsync('OnPlayerError', error.data, comparisonVideoId);
 }
