@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Sharenima.Server.Data;
 using Sharenima.Server.Models;
-using Sharenima.Server.SignalR;
+using Sharenima.Server.Services;
 using Sharenima.Shared;
 
 namespace Sharenima.Server.Controllers;

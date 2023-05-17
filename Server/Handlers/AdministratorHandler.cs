@@ -1,8 +1,5 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
 using Sharenima.Server.Data;
-using Sharenima.Server.Models;
 
 namespace Sharenima.Server.Handlers;
 

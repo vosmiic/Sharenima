@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace Sharenima.Client.ComponentCode; 
+namespace Sharenima.Client.ComponentCode;
 
 public partial class SettingsIndex : ComponentBase {
     [Parameter] public Guid InstanceId { get; set; }

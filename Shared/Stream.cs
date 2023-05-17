@@ -1,4 +1,4 @@
-namespace Sharenima.Shared; 
+namespace Sharenima.Shared;
 
 public class Stream {
     public string? StreamServer { get; set; }

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 
-namespace Sharenima.Client.ComponentCode.Stream; 
+namespace Sharenima.Client.ComponentCode.Stream;
 
 public partial class Stream : ComponentBase {
     [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
@@ -22,7 +22,7 @@ public partial class Stream : ComponentBase {
         if (authState.User.Identity?.Name == Username) {
             Owner = true;
         }
-        
+
         if (authState.User.Identity is { IsAuthenticated: true }) {
             _authHttpClient = HttpClientFactory.CreateClient("auth");
         }
@@ -35,6 +35,7 @@ public partial class Stream : ComponentBase {
         } else {
             httpResponseMessage = await _anonymousHttpClient.GetAsync($"stream?username={Username}");
         }
+
         if (!httpResponseMessage.IsSuccessStatusCode) return;
         SelectedStream = await httpResponseMessage.Content.ReadFromJsonAsync<Sharenima.Shared.Stream>();
     }
@@ -42,7 +43,7 @@ public partial class Stream : ComponentBase {
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
-        
+
         await _jsRuntime.InvokeVoidAsync("initializeStreamPlayer", SelectedStream?.PlayUrl);
     }
 
