@@ -148,29 +148,30 @@ public partial class Queue : ComponentBase {
     private async Task Hub() {
         await HubConnection.SendAsync("JoinGroup", InstanceId.ToString());
 
-        HubConnection.On<Sharenima.Shared.Queue.Queue>("AnnounceVideo", async (queue) => {
-            QueuePlayerService.AddToQueue(queue);
+        HubConnection.On<List<Sharenima.Shared.Queue.Queue>>("AnnounceVideo", async (queueList) => {
+            QueuePlayerService.SetQueue(queueList);
             SetList();
             StateHasChanged();
             if (QueuePlayerService.CurrentQueue.Count == 1)
-                RefreshService.CallPlayerRefreshRequested();
+                await RefreshService.CallPlayerRefreshRequested();
         });
 
-        HubConnection.On<Guid>("RemoveVideo", async (queueId) => {
-            Sharenima.Shared.Queue.Queue? queue = QueuePlayerService.CurrentQueue?.FirstOrDefault(queue => queue.Id == queueId);
-            if (queue != null) {
-                if (queue.Order == 0) {
-                    await RunNextVideo(queue);
-                } else {
-                    QueuePlayerService.RemoveFromQueue(queue);
-                    SetList();
-                    if (QueuePlayerService.CurrentQueue?.FirstOrDefault() == null || QueuePlayerService.CurrentQueue.FirstOrDefault()?.Id == queueId) {
-                        await RefreshService.CallPlayerVideoEnded();
-                        await RefreshService.CallPlayerRefreshRequested();
-                    }
-
-                    StateHasChanged();
+        HubConnection.On<List<Sharenima.Shared.Queue.Queue>>("RemoveVideo", async (queueList) => {
+            var existingQueue = QueuePlayerService.CurrentQueue;
+            QueuePlayerService.SetQueue(queueList);
+            var currentQueue = QueuePlayerService.CurrentQueue.First(item => item.Order == 0);
+            if (currentQueue.Id != existingQueue.First(queue => queue.Order == 0).Id) {
+                // not the same video, so needs changing
+                await RunNextVideo(currentQueue);
+            } else {
+                // same first video so we can just remove it without changing live video
+                if (!QueuePlayerService.CurrentQueue.Any()) {
+                    await RefreshService.CallPlayerVideoEnded();
+                    await RefreshService.CallPlayerRefreshRequested();
                 }
+                SetList();
+
+                StateHasChanged();
             }
         });
 
@@ -182,8 +183,8 @@ public partial class Queue : ComponentBase {
         });
 
         HubConnection.On<List<Sharenima.Shared.Queue.Queue>>("QueueOrderChange", (queueList) => {
-            QueueList = queueList.OrderBy(queue => queue.Order).ToList();
-            QueuePlayerService.SetQueue(QueueList);
+            QueuePlayerService.SetQueue(queueList);
+            SetList();
             StateHasChanged();
         });
     }

@@ -46,7 +46,7 @@ public class QueueController : ControllerBase {
         if (youtubeVideoInfo == null) return BadRequest("Provided video URL is incorrect");
 
         await using var context = await _contextFactory.CreateDbContextAsync();
-        Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == instanceId);
+        Instance? instance = await context.Instances.Where(instance => instance.Id == instanceId).Include(p => p.VideoQueue).FirstOrDefaultAsync();
         if (instance == null) return NotFound("Instance not found");
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return BadRequest("Authenticated user could not be found.");
@@ -65,7 +65,7 @@ public class QueueController : ControllerBase {
         await context.SaveChangesAsync();
 
         _logger.LogInformation($"Video {queue.Name} added to instance {instance.Id} queue");
-        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", instance.VideoQueue);
 
         return Ok();
     }
@@ -201,7 +201,9 @@ public class QueueController : ControllerBase {
 
         _logger.LogInformation($"Video {queue.Name} added to instance {instanceId} queue");
         queue.Subtitles = queue.Subtitles.Select(item => new QueueSubtitles { FileLocation = item.FileLocation }).ToList();
-        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", queue);
+        // fetch an updated list here because file uploads may have taken a long time and queue may have been modified during the process
+        var updatedInstanceQueues = await context.Instances.Where(instance => instance.Id == instanceId).Include(p => p.VideoQueue).ThenInclude(q => q.Subtitles).FirstOrDefaultAsync();
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", updatedInstanceQueues);
     }
 
     [HttpGet]
@@ -218,7 +220,8 @@ public class QueueController : ControllerBase {
         await using var context = await _contextFactory.CreateDbContextAsync();
         Queue? queue = await context.Queues.FirstOrDefaultAsync(queue => queue.Id == queueId);
         if (queue == null) return NotFound("Queue does not exist");
-        foreach (Queue existingQueue in context.Queues.Where(dbQueue => dbQueue.InstanceId == instanceId && dbQueue.Order > queue.Order)) {
+        List<Queue> instanceQueues = context.Queues.Where(dbQueue => dbQueue.InstanceId == instanceId).ToList();
+        foreach (Queue existingQueue in instanceQueues.Where(dbQueue => dbQueue.Order > queue.Order)) {
             existingQueue.Order--;
         }
 
@@ -233,7 +236,9 @@ public class QueueController : ControllerBase {
 
         await context.SaveChangesAsync();
         _logger.LogInformation($"Video {queue.Name} removed from instance queue");
-        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("RemoveVideo", queue.Id);
+
+        instanceQueues.Remove(queue);
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("RemoveVideo", instanceQueues);
         return Ok();
     }
 
