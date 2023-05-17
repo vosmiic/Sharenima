@@ -1,6 +1,7 @@
 @page "/g/{InstanceId}"
 @inherits Sharenima.Client.ComponentCode.Instance
 @using Sharenima.Client.Pages.Instance.SettingsPages
+@using Sharenima.Client.Pages.Stream
 
 @if (SelectedInstance == null) {
     <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
@@ -11,6 +12,7 @@
             <MatIconButton OnClick="@SettingsButtonClicked" Icon="settings"></MatIconButton>
             <MatAppBarTitle>Instance @SelectedInstance.Name</MatAppBarTitle>
             <div class="mx-auto"></div>
+            <GoLive></GoLive>
             <MatIconButton Icon="@ChatResizeButtonIcon" OnClick="() => ClickedChatResizeButton(!HideChat)"></MatIconButton>
         </nav>
 
