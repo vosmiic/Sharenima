@@ -64,6 +64,9 @@ public partial class Queue : ComponentBase {
 
         if (!addVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not add video; {addVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
+        } else {
+            VideoUrl = string.Empty;
+            StateHasChanged();
         }
     }
 
