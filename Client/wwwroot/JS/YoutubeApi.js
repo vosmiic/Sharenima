@@ -55,17 +55,11 @@ function onYouTubeIframeAPIReady() {
 function youtubeOnReady(event) {
     dotNetHelper.invokeMethodAsync('RequestInitialVideoTime').then((time) => {
         event.target.seekTo(time);
+        pauseYT();
     });
     
     if (autoplay) {
-        event.target.playVideo();
-        setTimeout(() => {
-            if (event.target.getPlayerState() === -1) {
-                // user must have not interacted with the site yet, got to mute and then play again
-                event.target.mute();
-                event.target.playVideo();
-            }
-        }, 500);
+        playYT();
     }
     console.log("setting ready true")
     dotNetHelper.invokeMethodAsync('SetReady', true);
@@ -129,6 +123,8 @@ function changeYTVideoSource(videoId) {
 }
 
 function youtubeStateChange(event) {
+    if (event.data == 1)
+        console.log(event);
     dotNetHelper.invokeMethodAsync('StateChange', event.data, comparisonVideoId);
 }
 
