@@ -203,7 +203,7 @@ public class QueueController : ControllerBase {
         queue.Subtitles = queue.Subtitles.Select(item => new QueueSubtitles { FileLocation = item.FileLocation }).ToList();
         // fetch an updated list here because file uploads may have taken a long time and queue may have been modified during the process
         var updatedInstanceQueues = await context.Instances.Where(instance => instance.Id == instanceId).Include(p => p.VideoQueue).ThenInclude(q => q.Subtitles).FirstOrDefaultAsync();
-        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", updatedInstanceQueues);
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", updatedInstanceQueues?.VideoQueue);
     }
 
     [HttpGet]
