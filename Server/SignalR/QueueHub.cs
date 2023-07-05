@@ -87,6 +87,7 @@ public class QueueHub : Hub {
             Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
             if (playerState == State.Ended) {
                 context.Remove(queue);
+                SortQueueOrder(context, queue.InstanceId);
                 if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Development")
                     if (queue.VideoType == VideoType.FileUpload) {
                         FileHelper.DeleteFile(queue.Url, _configuration, _logger);
@@ -128,6 +129,20 @@ public class QueueHub : Hub {
         } else {
             // something weird is happening, rewind the user
             await Clients.Caller.SendAsync("ReceiveProgressChange", _instanceTimeTracker.GetInstanceTime(groupName));
+        }
+    }
+
+    private void SortQueueOrder(GeneralDbContext generalDbContext, Guid instanceId) {
+        var queues = generalDbContext.Queues.Where(queue => queue.InstanceId == instanceId).AsEnumerable().Where(queue => generalDbContext.Entry(queue).State != EntityState.Deleted).OrderBy(queue => queue.Order).ToList();
+
+        for (int i = 0; i < queues.Count(); i++) {
+            if (i == 0) {
+                queues[i].Order = 0;
+                continue;
+            }
+
+            int previousOrder = queues[i - 1].Order;
+            queues[i].Order = previousOrder + 1;
         }
     }
 
