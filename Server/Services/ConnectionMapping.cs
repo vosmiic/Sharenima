@@ -17,7 +17,7 @@ public class ConnectionMapping {
     /// <param name="userId">User ID.</param>
     /// <param name="userName">User name.</param>
     /// <returns>True if the user is the leader.</returns>
-    public void Add(Guid instanceId, string connectionId, int leaderRank, Guid? userId = null, string? userName = null) {
+    public (string?, string?) Add(Guid instanceId, string connectionId, int leaderRank, Guid? userId = null, string? userName = null) {
         KeyValuePair<Guid, List<InstanceConnection>>? instanceConnections;
         lock (_instanceConnections) {
             instanceConnections = _instanceConnections.FirstOrDefault(ic => ic.Key == instanceId);
@@ -35,7 +35,7 @@ public class ConnectionMapping {
                     }
                 });
             }
-            return;
+            return (null, connectionId);
         }
 
         InstanceConnection? existingConnection = instanceConnections.Value.Value.FirstOrDefault(ic => ic.ConnectionId == connectionId && ic.UserId == userId);
@@ -59,8 +59,10 @@ public class ConnectionMapping {
                 }
                 instanceConnections.Value.Value.Add(newConnection);
             }
-            return;
+            return (oldLeader?.ConnectionId, newConnection.IsLeader ? connectionId : null);
         }
+
+        return (null, null);
     }
 
     public Dictionary<Guid, List<InstanceConnection>> GetConnections() {
@@ -71,7 +73,7 @@ public class ConnectionMapping {
 
     public InstanceConnection? GetConnectionById(Guid instanceId, string connectionId) => _instanceConnections.FirstOrDefault(connections => connections.Key == instanceId).Value.FirstOrDefault(ic => ic.ConnectionId == connectionId);
 
-    public void Remove(Guid instanceId, string connectionId, Guid? userId = null) {
+    public string? Remove(Guid instanceId, string connectionId, Guid? userId = null) {
         KeyValuePair<Guid, List<InstanceConnection>>? instanceConnections;
         lock (_instanceConnections) {
             instanceConnections = _instanceConnections.FirstOrDefault(ic => ic.Key == instanceId);
@@ -83,11 +85,15 @@ public class ConnectionMapping {
                 lock (_instanceConnections) {
                     instanceConnections.Value.Value.Remove(instanceConnection);
                     if (instanceConnection.IsLeader && instanceConnections.Value.Value.Count > 0) {
+                        // below needs changing, should be sorted by leader ranking
                         instanceConnections.Value.Value.First().IsLeader = true;
+                        return instanceConnections.Value.Value.First().ConnectionId;
                     }
                 }
             }
         }
+
+        return null;
     }
 
     public class InstanceConnection {

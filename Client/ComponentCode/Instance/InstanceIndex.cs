@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
+using Sharenima.Client.Helpers;
 using Sharenima.Shared;
 
 namespace Sharenima.Client.ComponentCode;
@@ -18,6 +19,7 @@ public partial class Instance : ComponentBase {
     [Inject] IAccessTokenProvider TokenProvider { get; set; }
     [Inject] protected IMatToaster _toaster { get; set; }
     [Inject] protected QueuePlayerService QueuePlayerService { get; set; }
+    [Inject] protected HubService HubService { get; set; }
     [Inject] protected RefreshService RefreshService { get; set; }
     [Inject] private PermissionService PermissionService { get; set; }
     [Inject] private IJSRuntime _jsRuntime { get; set; }
@@ -58,9 +60,11 @@ public partial class Instance : ComponentBase {
         }
 
         SelectedInstance = instance;
+    }
 
+    protected async override Task OnParametersSetAsync() {
         _hubConnection = new HubConnectionBuilder()
-            .WithUrl(_navigationManager.ToAbsoluteUri("/queuehub?instanceId=" + instance.Id), options => {
+            .WithUrl(_navigationManager.ToAbsoluteUri("/queuehub?instanceId=" + SelectedInstance.Id), options => {
                 options.AccessTokenProvider = async () => {
                     var result = await TokenProvider.RequestAccessToken();
                     if (result.TryGetToken(out var token)) {
@@ -71,6 +75,7 @@ public partial class Instance : ComponentBase {
                 };
             })
             .Build();
+        HubStarterConnections.AttachHandlers(HubService, _hubConnection);
 
         await _hubConnection.StartAsync();
 

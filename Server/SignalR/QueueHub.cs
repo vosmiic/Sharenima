@@ -56,11 +56,13 @@ public class QueueHub : Hub {
             _instanceTimeTracker.Add(parsedInstanceId, instance.VideoTime);
         }
 
-        _connectionMapping.Add(parsedInstanceId, Context.ConnectionId, leaderRank, parsedUserId, username);
+        (string? oldLeader, string? newLeader) instanceLeadership = _connectionMapping.Add(parsedInstanceId, Context.ConnectionId, leaderRank, parsedUserId, username);
+        await LeadershipChange(instanceLeadership.oldLeader, instanceLeadership.newLeader);
         _logger.LogInformation($"Added {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} to instance {instanceId[0]} connection map");
         if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", username);
+        await base.OnConnectedAsync();
     }
-
+    
     public override async Task OnDisconnectedAsync(Exception? exception) {
         string? userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid? parsedUserId = userId != null ? Guid.Parse(userId) : null;
@@ -68,10 +70,18 @@ public class QueueHub : Hub {
         if (httpContext == null) return;
         var instanceId = httpContext.Request.Query["instanceId"];
         if (instanceId.Count == 0) return;
-
-        _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId);
+        
+        string? newLeader = _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId);
+        await LeadershipChange(null, newLeader);
         _logger.LogInformation($"Removed {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} from instance {instanceId[0]} connection map");
         if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserLeft", parsedUserId.Value);
+    }
+
+    private async Task LeadershipChange(string? oldLeader = null, string? newLeader = null) {
+        if (oldLeader != null)
+            await Clients.Client(oldLeader).SendAsync("LeadershipChange", false);
+        if (newLeader != null)
+            await Clients.Client(newLeader).SendAsync("LeadershipChange", true);
     }
 
     public async Task JoinGroup(string groupName) {
