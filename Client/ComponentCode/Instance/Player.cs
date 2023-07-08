@@ -17,6 +17,7 @@ public partial class Player : ComponentBase {
     [Inject] protected RefreshService RefreshService { get; set; }
     [Inject] private PermissionService PermissionService { get; set; }
     [Inject] private StreamService StreamService { get; set; }
+    [Inject] private HubService HubService { get; set; }
     [Inject] private IHttpClientFactory HttpClientFactory { get; set; }
     [Inject] protected IMatToaster _toaster { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
@@ -44,7 +45,7 @@ public partial class Player : ComponentBase {
 
     [JSInvokable]
     public async void ProgressChange(Guid videoId, double newTime, bool seeked) {
-        if (_videoReady && playerState != State.Ended && videoId == Video?.Id && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
+        if (HubService.IsLeader && _videoReady && playerState != State.Ended && videoId == Video?.Id && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
             if (_initialVideoLoad) {
                 if (await SendProgressChange(newTime, Video?.Id))
                     _initialVideoLoad = false;

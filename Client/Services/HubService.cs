@@ -3,6 +3,7 @@ using AsyncEventHandlers;
 namespace Sharenima.Client; 
 
 public class HubService {
+    public bool IsLeader { get; private set; }
     private readonly AsyncEventHandler<bool> leadershipChange = new();
     public event AsyncEvent<bool> LeadershipChange
     {
@@ -11,6 +12,8 @@ public class HubService {
     }
     
     public async Task LeadershipChanged(bool userIsLeader) {
-        await leadershipChange.InvokeAsync(userIsLeader);
+        IsLeader = userIsLeader;
+        Console.WriteLine(IsLeader ? "I am the leader :)" : "I am no longer the leader :(");
+        //await leadershipChange.InvokeAsync(userIsLeader);
     }
 }

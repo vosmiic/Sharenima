@@ -35,7 +35,6 @@ public partial class Queue : ComponentBase {
     private List<Sharenima.Shared.Queue.Queue> QueueListOriginal { get; set; } = new List<Sharenima.Shared.Queue.Queue>();
     protected bool AdvancedUploadSettingsIsOpen = false;
     protected UploadAdvancedSettings _uploadAdvancedSettings { get; set; } = new UploadAdvancedSettings();
-    private bool UserIsLeader { get; set; }
 
     protected override async Task OnInitializedAsync() {
         var authState = await authenticationStateTask;
@@ -193,13 +192,6 @@ public partial class Queue : ComponentBase {
             StateHasChanged();
         });
         
-        HubService.LeadershipChange += LeadershipChange;
-    }
-    
-    private Task LeadershipChange(bool isLeader, CancellationToken cancellationToken) {
-        Console.WriteLine(isLeader ? "I am the leader :)" : "I am no longer the leader :(");
-        UserIsLeader = isLeader;
-        return Task.CompletedTask;
     }
 
     private void SetList() {
