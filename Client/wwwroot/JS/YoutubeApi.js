@@ -123,8 +123,6 @@ function changeYTVideoSource(videoId) {
 }
 
 function youtubeStateChange(event) {
-    if (event.data == 1)
-        console.log(event);
     dotNetHelper.invokeMethodAsync('StateChange', event.data, comparisonVideoId);
 }
 
