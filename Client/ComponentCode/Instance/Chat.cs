@@ -14,6 +14,7 @@ public partial class Chat : ComponentBase {
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
     protected List<string>? UserList { get; set; }
+    protected int OnlineUsers { get; set; }
 
     protected override async Task OnInitializedAsync() {
         var authState = await authenticationStateTask;
@@ -28,25 +29,31 @@ public partial class Chat : ComponentBase {
                 UserList = new List<string>();
                 UserList.Add(username);
             }
-
+            
+            RefreshOnlineUserCount();
             StateHasChanged();
         });
 
         HubConnection.On<Guid>("UserLeft", (userId) => {
             if (UserList != null) {
                 UserList.Remove(userId.ToString());
-            } else {
-                UserList = new List<string>();
-                UserList.Remove(userId.ToString());
             }
 
+            RefreshOnlineUserCount();
             StateHasChanged();
         });
     }
 
     protected override async Task OnParametersSetAsync() {
         var httpResponse = await _anonymousHttpClient.GetAsync($"instance/users?instanceId={InstanceId}");
-        if (httpResponse.IsSuccessStatusCode && httpResponse.StatusCode != HttpStatusCode.NoContent)
+        if (httpResponse.IsSuccessStatusCode && httpResponse.StatusCode != HttpStatusCode.NoContent) {
             UserList = await httpResponse.Content.ReadFromJsonAsync<List<string>>();
+            RefreshOnlineUserCount();
+        }
+    }
+
+    private void RefreshOnlineUserCount() {
+        if (UserList == null)
+            OnlineUsers = UserList.Count;
     }
 }

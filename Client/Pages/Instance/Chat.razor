@@ -1,5 +1,6 @@
 @inherits Sharenima.Client.ComponentCode.Chat
 <div>
+    <p>Online users: @OnlineUsers</p>
     @if (UserList != null) {
         <MatList>
             @foreach (string userName in UserList) {
