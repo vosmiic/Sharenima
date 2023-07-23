@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Common.Extensions;
 using Duende.IdentityServer.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -56,10 +57,27 @@ public class QueueHub : Hub {
             _instanceTimeTracker.Add(parsedInstanceId, instance.VideoTime);
         }
 
+        if (username == null) {
+            username = "Anonymous";
+            var words = gnuciDictionary.EnglishDictionary.GetAllWords().ToList();
+            for (int i = 0; i < 2; i++) {
+                string word = words.Random().Value;
+                if (!char.IsUpper(word[0])) {
+                    if (word.Length > 1)
+                        username += char.ToUpper(word[0]) + word.Substring(1);
+                    else
+                        username += char.ToUpper(word[0]);
+                } else {
+                    username += word;
+                }
+            }
+        }
+        
         (string? oldLeader, string? newLeader) instanceLeadership = _connectionMapping.Add(parsedInstanceId, Context.ConnectionId, leaderRank, parsedUserId, username);
         await LeadershipChange(instanceLeadership.oldLeader, instanceLeadership.newLeader);
-        _logger.LogInformation($"Added {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} to instance {instanceId[0]} connection map");
-        if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserJoined", username);
+        _logger.LogInformation($"Added {username} to instance {instanceId[0]} connection map");
+        await Clients.Group(instanceId[0]).SendAsync("UserJoined", username);
+        await Clients.Caller.SendAsync("UserJoined", username);
         await base.OnConnectedAsync();
     }
     
@@ -70,11 +88,14 @@ public class QueueHub : Hub {
         if (httpContext == null) return;
         var instanceId = httpContext.Request.Query["instanceId"];
         if (instanceId.Count == 0) return;
-        
-        string? newLeader = _connectionMapping.Remove(Guid.Parse(instanceId[0]), Context.ConnectionId, parsedUserId);
+
+        Guid parsedInstanceId = Guid.Parse(instanceId[0]);
+        ConnectionMapping.InstanceConnection? user = _connectionMapping.GetConnectionById(parsedInstanceId, Context.ConnectionId);
+        if (user == null) return;
+        string? newLeader = _connectionMapping.Remove(parsedInstanceId, Context.ConnectionId, parsedUserId);
         await LeadershipChange(null, newLeader);
-        _logger.LogInformation($"Removed {(parsedUserId != null ? $"user {parsedUserId}" : "anonymous user")} from instance {instanceId[0]} connection map");
-        if (parsedUserId != null) await Clients.Group(instanceId[0]).SendAsync("UserLeft", parsedUserId.Value);
+        _logger.LogInformation($"Removed {user.UserName} from instance {instanceId[0]} connection map");
+        await Clients.Group(instanceId[0]).SendAsync("UserLeft", user.UserName);
     }
 
     private async Task LeadershipChange(string? oldLeader = null, string? newLeader = null) {
