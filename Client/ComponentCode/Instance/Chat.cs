@@ -25,19 +25,15 @@ public partial class Chat : ComponentBase {
         _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
 
         HubService.userJoined += ( username,  _) => {
-            if (username == null) {
-                UserList.Add(User.AnonymousUsername); //todo no identifier? should probably be changed
-            } else {
-                if (!UserList.Contains(username)) UserList.Add(username);
-            }
+            if (!UserList.Contains(username)) UserList.Add(username);
 
             RefreshOnlineUserCount();
             StateHasChanged();
             return Task.CompletedTask;
         };
 
-        HubConnection.On<string?>("UserLeft", (username) => {
-            UserList.Remove(username ?? User.AnonymousUsername);
+        HubConnection.On<string>("UserLeft", (username) => {
+            UserList.Remove(username);
 
             RefreshOnlineUserCount();
             StateHasChanged();
