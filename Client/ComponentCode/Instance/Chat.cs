@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
+using Sharenima.Shared;
 
 namespace Sharenima.Client.ComponentCode;
 
@@ -11,9 +12,10 @@ public partial class Chat : ComponentBase {
     private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
     [Inject] private IHttpClientFactory HttpClientFactory { get; set; }
+    [Inject] private HubService HubService { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public HubConnection? HubConnection { get; set; }
-    protected List<string>? UserList { get; set; }
+    protected List<string> UserList { get; set; } = new();
     protected int OnlineUsers { get; set; }
 
     protected override async Task OnInitializedAsync() {
@@ -22,22 +24,20 @@ public partial class Chat : ComponentBase {
             _authHttpClient = HttpClientFactory.CreateClient("auth");
         _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
 
-        HubConnection.On<string>("UserJoined", (username) => {
-            if (UserList != null) {
-                if (!UserList.Contains(username)) UserList.Add(username);
+        HubService.userJoined += ( username,  _) => {
+            if (username == null) {
+                UserList.Add(User.AnonymousUsername); //todo no identifier? should probably be changed
             } else {
-                UserList = new List<string>();
-                UserList.Add(username);
+                if (!UserList.Contains(username)) UserList.Add(username);
             }
-            
+
             RefreshOnlineUserCount();
             StateHasChanged();
-        });
+            return Task.CompletedTask;
+        };
 
-        HubConnection.On<Guid>("UserLeft", (userId) => {
-            if (UserList != null) {
-                UserList.Remove(userId.ToString());
-            }
+        HubConnection.On<string?>("UserLeft", (username) => {
+            UserList.Remove(username ?? User.AnonymousUsername);
 
             RefreshOnlineUserCount();
             StateHasChanged();
@@ -52,8 +52,6 @@ public partial class Chat : ComponentBase {
         }
     }
 
-    private void RefreshOnlineUserCount() {
-        if (UserList == null)
-            OnlineUsers = UserList.Count;
-    }
+    private void RefreshOnlineUserCount() =>
+        OnlineUsers = UserList.Count;
 }

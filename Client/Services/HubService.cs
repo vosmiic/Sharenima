@@ -4,16 +4,18 @@ namespace Sharenima.Client;
 
 public class HubService {
     public bool IsLeader { get; private set; }
-    private readonly AsyncEventHandler<bool> leadershipChange = new();
-    public event AsyncEvent<bool> LeadershipChange
+    private readonly AsyncEventHandler<string> userJoinRequested = new();
+    public event AsyncEvent<string> userJoined
     {
-        add { leadershipChange.Register(value); }
-        remove { leadershipChange.Unregister(value); }
+        add => userJoinRequested.Register(value);
+        remove => userJoinRequested.Unregister(value);
     }
     
     public async Task LeadershipChanged(bool userIsLeader) {
         IsLeader = userIsLeader;
-        Console.WriteLine(IsLeader ? "I am the leader :)" : "I am no longer the leader :(");
-        //await leadershipChange.InvokeAsync(userIsLeader);
+    }
+
+    public async Task UserJoined(string username) {
+        await userJoinRequested.InvokeAsync(username);
     }
 }

@@ -7,5 +7,9 @@ public class HubStarterConnections {
         hubConnection.On<bool>("LeadershipChange", async (userIsLeader) => {
             await hubService.LeadershipChanged(userIsLeader);
         });
+
+        hubConnection.On<string>("UserJoined", async (username) => {
+            await hubService.UserJoined(username);
+        });
     }
 }
