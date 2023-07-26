@@ -166,7 +166,7 @@ public partial class Queue : ComponentBase {
             var currentQueue = QueuePlayerService.CurrentQueue.First(item => item.Order == 0);
             if (currentQueue.Id != existingQueue.First(queue => queue.Order == 0).Id) {
                 // not the same video, so needs changing
-                await RunNextVideo(currentQueue);
+                await RunNextVideo();
             } else {
                 // same first video so we can just remove it without changing live video
                 if (!QueuePlayerService.CurrentQueue.Any()) {
@@ -182,7 +182,8 @@ public partial class Queue : ComponentBase {
         HubConnection.On<State>("ReceiveStateChange", async (state) => {
             if (state == State.Ended) {
                 // remove current video since it has been completed
-                await RunNextVideo(QueuePlayerService.CurrentQueue.First());
+                QueuePlayerService.RemoveFromQueue(QueuePlayerService.CurrentQueue.First());
+                await RunNextVideo();
             }
         });
 
@@ -199,8 +200,7 @@ public partial class Queue : ComponentBase {
         QueueListOriginal = QueueList;
     }
 
-    private async Task RunNextVideo(Sharenima.Shared.Queue.Queue queue) {
-        QueuePlayerService.RemoveFromQueue(queue);
+    private async Task RunNextVideo() {
         SetList();
         await RefreshService.CallPlayerVideoEnded();
         await RefreshService.CallPlayerRefreshRequested();
