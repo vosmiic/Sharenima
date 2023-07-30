@@ -33,6 +33,7 @@ public partial class Instance : ComponentBase {
     protected bool HideChat { get; set; }
     protected string ChatResizeButtonIcon { get; set; } = "arrow_forward";
     protected int PlayerColumnSize { get; set; } = 8;
+    protected bool UserIsAuthenticated { get; set; }
 
 
     protected override async Task OnInitializedAsync() {
@@ -41,6 +42,7 @@ public partial class Instance : ComponentBase {
 
         if (authState.User.Identity is { IsAuthenticated: true }) {
             _authHttpClient = HttpClientFactory.CreateClient("auth");
+            UserIsAuthenticated = true;
         }
 
 

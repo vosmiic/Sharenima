@@ -9,7 +9,9 @@
     <div>
         <nav class="navbar navbar-dark bg-light">
             <MatIconButton Icon="@QueueResizeButtonIcon" OnClick="ClickedQueueResizeButton"></MatIconButton>
-            <SettingsDialog InstanceId="@SelectedInstance.Id"></SettingsDialog>
+            @if (UserIsAuthenticated) {
+                <SettingsDialog InstanceId="@SelectedInstance.Id"></SettingsDialog>
+            }
             <MatAppBarTitle>Instance @SelectedInstance.Name</MatAppBarTitle>
             <div class="mx-auto"></div>
             <GoLive></GoLive>
