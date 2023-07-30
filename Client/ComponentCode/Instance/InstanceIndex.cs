@@ -26,7 +26,6 @@ public partial class Instance : ComponentBase {
     [Parameter] public string InstanceId { get; set; }
     protected HubConnection? _hubConnection;
     protected Sharenima.Shared.Instance? SelectedInstance { get; set; }
-    protected bool settingsIsOpen = false;
     private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
     protected bool HideQueue { get; set; }
@@ -94,9 +93,6 @@ public partial class Instance : ComponentBase {
         isLoaded = true;
     }
 
-    protected void SettingsButtonClicked() =>
-        settingsIsOpen = true;
-
     private Task StateChanged(CancellationToken cancellationToken) {
         StateHasChanged();
         return Task.CompletedTask;
@@ -108,25 +104,27 @@ public partial class Instance : ComponentBase {
         return _authHttpClient;
     }
 
-    protected void ClickedChatResizeButton(bool hide) {
-        HideChat = hide;
-        if (hide) {
+    protected void ClickedChatResizeButton() {
+        if (!HideChat) {
             ChatResizeButtonIcon = "arrow_back";
             PlayerColumnSize += 2;
         } else {
             ChatResizeButtonIcon = "arrow_forward";
             PlayerColumnSize -= 2;
         }
+        
+        HideChat = !HideChat;
     }
 
-    protected void ClickedQueueResizeButton(bool hide) {
-        HideQueue = hide;
-        if (hide) {
+    protected void ClickedQueueResizeButton() {
+        if (!HideQueue) {
             QueueResizeButtonIcon = "arrow_forward";
             PlayerColumnSize += 2;
         } else {
             QueueResizeButtonIcon = "arrow_back";
             PlayerColumnSize -= 2;
         }
+
+        HideQueue = !HideQueue;
     }
 }
