@@ -8,12 +8,12 @@
 } else {
     <div>
         <nav class="navbar navbar-dark bg-light">
-            <MatIconButton Icon="@QueueResizeButtonIcon" OnClick="() => ClickedQueueResizeButton(!HideQueue)"></MatIconButton>
-            <MatIconButton OnClick="@SettingsButtonClicked" Icon="settings"></MatIconButton>
+            <MatIconButton Icon="@QueueResizeButtonIcon" OnClick="ClickedQueueResizeButton"></MatIconButton>
+            <SettingsDialog InstanceId="@SelectedInstance.Id"></SettingsDialog>
             <MatAppBarTitle>Instance @SelectedInstance.Name</MatAppBarTitle>
             <div class="mx-auto"></div>
             <GoLive></GoLive>
-            <MatIconButton Icon="@ChatResizeButtonIcon" OnClick="() => ClickedChatResizeButton(!HideChat)"></MatIconButton>
+            <MatIconButton Icon="@ChatResizeButtonIcon" OnClick="ClickedChatResizeButton"></MatIconButton>
         </nav>
 
         <div class="container-fluid">
@@ -32,11 +32,4 @@
             </div>
         </div>
     </div>
-
-    <MatDialog @bind-IsOpen="@settingsIsOpen">
-        <MatDialogTitle>Instance Settings</MatDialogTitle>
-        <MatDialogContent>
-            <SettingsIndex InstanceId="@SelectedInstance.Id"/>
-        </MatDialogContent>
-    </MatDialog>
 }

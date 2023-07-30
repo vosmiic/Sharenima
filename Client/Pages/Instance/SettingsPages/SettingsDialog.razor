@@ -1,0 +1,9 @@
+@inherits Sharenima.Client.ComponentCode.Settings.SettingsDialog
+<MatIconButton OnClick="SettingsButtonClicked" Icon="settings"></MatIconButton>
+
+<MatDialog @bind-IsOpen="@SettingsIsOpen">
+    <MatDialogTitle>Instance Settings</MatDialogTitle>
+    <MatDialogContent>
+        <SettingsIndex InstanceId="@InstanceId"/>
+    </MatDialogContent>
+</MatDialog>
