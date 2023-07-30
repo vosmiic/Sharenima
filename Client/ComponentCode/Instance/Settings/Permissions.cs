@@ -49,7 +49,8 @@ public partial class Permissions : ComponentBase {
 
     }
 
-    protected void ChangeSelectedUser(string selectedUsername) {
+    protected void ChangeSelectedUser(ChangeEventArgs args) {
+        string selectedUsername = (string?)args.Value ?? String.Empty;
         if (string.IsNullOrEmpty(selectedUsername)) {
             SelectedUser = null;
 
@@ -63,7 +64,7 @@ public partial class Permissions : ComponentBase {
                 }
             }
         }
-        if (InstancePermissions?.UserPermissions != null) {
+        if (InstancePermissions?.UserPermissions != null && InstancePermissions.UserPermissions.Any(item => item.Username == selectedUsername)) {
             SelectedUser = InstancePermissions.UserPermissions.FirstOrDefault(user => user.Username == selectedUsername);
 
             foreach (PermissionOptions permissionOptions in PermissionOptions) {
@@ -85,7 +86,8 @@ public partial class Permissions : ComponentBase {
 
     }
 
-    protected void AnonymousLoggedInUserPermissionSwitch(bool toggle) {
+    protected void AnonymousLoggedInUserPermissionSwitch(ChangeEventArgs args) {
+        bool toggle = (bool?)args.Value ?? false;
         if (toggle) {
             foreach (PermissionOptions permissionOptions in PermissionOptions) {
                 permissionOptions.Ticked = InstancePermissions is { AnonymousUsersPermissions: { } } && InstancePermissions.AnonymousUsersPermissions.Contains((Sharenima.Shared.Permissions.Permission)permissionOptions.PermissionEnum);
