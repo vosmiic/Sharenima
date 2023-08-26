@@ -67,19 +67,38 @@ function youtubeOnReady(event) {
 
 let initialLoad = true;
 let lastUpdateTime = null;
+let fastLastUpdateTime = null;
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
         var currentTime = getCurrentTime();
         if (currentTime && player.getPlayerState() !== 0 && player.getPlayerState() !== 2) {
             if (!initialLoad) {
                 let playerPlaybackRate = player.getPlaybackRate();
-                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 0.5) > 0.2 && playerPlaybackRate === 1);
+                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 1) > 0.2 && playerPlaybackRate === 1);
                 lastUpdateTime = currentTime;
+                fastLastUpdateTime = currentTime;
             }
             initialLoad = false;
         }
     }
-}, 500)
+}, 1000)
+
+// below only handles seeked
+setInterval(function () {
+    if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
+        var currentTime = getCurrentTime();
+        let playerPlaybackRate = player.getPlaybackRate();
+        if (fastLastUpdateTime != null && Math.abs(currentTime - fastLastUpdateTime - 0.05) > 1.1 && playerPlaybackRate === 1) {
+            console.log(Math.abs(currentTime - fastLastUpdateTime - 0.05));
+            if (!initialLoad) {
+                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, true);
+                lastUpdateTime = currentTime;
+                fastLastUpdateTime = currentTime;
+            }
+            initialLoad = false;
+        }
+    }
+}, 50);
 
 //functions
 function playYT() {
