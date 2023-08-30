@@ -60,6 +60,10 @@ public partial class Instance : ComponentBase {
             PermissionService.AddToUserPermissions(userPermission);
         }
 
+        foreach (InstancePermission instancePermission in instance.Permissions) {
+            PermissionService.AddToInstancePermissions(instancePermission.Permissions, instancePermission.AnonymousUser);
+        }
+
         SelectedInstance = instance;
     }
 
