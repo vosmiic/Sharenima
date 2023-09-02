@@ -45,7 +45,7 @@ public partial class Player : ComponentBase {
 
     [JSInvokable]
     public async void ProgressChange(Guid videoId, double newTime, bool seeked) {
-        if (HubService.IsLeader && _videoReady && playerState != State.Ended && videoId == Video?.Id && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
+        if ((HubService.IsLeader || seeked) && _videoReady && playerState != State.Ended && videoId == Video?.Id && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
             if (_initialVideoLoad) {
                 if (await SendProgressChange(newTime, Video?.Id))
                     _initialVideoLoad = false;
@@ -100,7 +100,16 @@ public partial class Player : ComponentBase {
         VideoType? oldVideoType = Video?.VideoType;
         Video = QueuePlayerService.CurrentQueue.FirstOrDefault();
         InitialState = playerState is State.Ended or State.Playing ? State.Playing : State.Paused;
-        if (oldVideoType != null && oldVideoType == Video?.VideoType) {
+        bool playerLoaded = false;
+        switch (oldVideoType) {
+            case VideoType.YouTube:
+                playerLoaded = await _jsRuntime.InvokeAsync<bool>("youtubeCheckIfPlayerExists", cancellationToken);
+                break;
+            case VideoType.FileUpload:
+                playerLoaded = await _jsRuntime.InvokeAsync<bool>("uploadCheckIfPlayerExists", cancellationToken);
+                break;
+        }
+        if (oldVideoType != null && oldVideoType == Video?.VideoType && playerLoaded) {
             if (Video?.VideoType == VideoType.YouTube)
                 await _jsRuntime.InvokeVoidAsync("changeYTVideoSource", RequestVideo());
             if (Video?.VideoType == VideoType.FileUpload)
@@ -189,6 +198,7 @@ public partial class Player : ComponentBase {
 
         HubConnection.On<TimeSpan, Guid?>("ReceiveProgressChange", async (newTime, videoId) => {
             if (Video?.Id == videoId) {
+                _initialVideoLoad = false;
                 TimeSpan mediaTime = await GetMediaTime();
                 var difference = newTime.TotalMilliseconds - mediaTime.TotalMilliseconds;
                 if (difference is > 250 or < -250)

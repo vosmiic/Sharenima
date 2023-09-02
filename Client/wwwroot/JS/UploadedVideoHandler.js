@@ -52,7 +52,7 @@ function loadVideoFunctions(autoplay, currentVideoId, queue) {
     
     uploadedPlayer.on('time', function (event) {
         let difference = lastUpdate - event.position;
-        if (ready && uploadedPlayer.getState() !== "paused" && (difference >= 0.5 || difference <= -0.5)) {
+        if (ready && uploadedPlayer.getState() !== "paused" && (difference >= 1 || difference <= -1)) {
             lastUpdate = event.position;
             updateServerTime(event.position);
         }
@@ -149,4 +149,13 @@ function playVideo() {
 
 function uploadGetTime() {
     return uploadedPlayer.getPosition();
+}
+
+function uploadCheckIfPlayerExists() {
+    try {
+        uploadedPlayer.getVersion();
+        return true;
+    } catch (_) {
+        return false;
+    }
 }

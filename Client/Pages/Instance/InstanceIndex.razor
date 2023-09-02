@@ -24,9 +24,7 @@
                     <Queue InstanceId="@SelectedInstance.Id" HubConnection="@_hubConnection"></Queue>
                 </div>
                 <div class="col-@PlayerColumnSize p-0">
-                    @if (QueuePlayerService.CurrentQueue.FirstOrDefault() != null) {
-                        <Player InstanceId="@SelectedInstance.Id" InitialState="@SelectedInstance.PlayerState" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime"></Player>
-                    }
+                    <Player InstanceId="@SelectedInstance.Id" InitialState="@SelectedInstance.PlayerState" HubConnection="@_hubConnection" VideoTime="@SelectedInstance.VideoTime"></Player>
                 </div>
                 <div class="col-2 @(HideChat ? "d-none" : String.Empty)">
                     <Chat InstanceId="SelectedInstance.Id" HubConnection="@_hubConnection"></Chat>
