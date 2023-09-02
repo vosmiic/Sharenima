@@ -49,10 +49,9 @@ public class QueueController : ControllerBase {
         Instance? instance = await context.Instances.Where(instance => instance.Id == instanceId).Include(p => p.VideoQueue).FirstOrDefaultAsync();
         if (instance == null) return NotFound("Instance not found");
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return BadRequest("Authenticated user could not be found.");
 
         Queue queue = new Queue {
-            AddedById = Guid.Parse(userId),
+            AddedById = userId != null ? Guid.Parse(userId) : null,
             Name = youtubeVideoInfo.Title,
             Url = videoUrl,
             Thumbnail = youtubeVideoInfo.ThumbnailUrl,
@@ -94,9 +93,10 @@ public class QueueController : ControllerBase {
             Directory.CreateDirectory(downloadDirectory.FullName);
         }
 
+        string? user = User.FindFirstValue(ClaimTypes.NameIdentifier);
         Queue queue = new Queue {
             Id = Guid.NewGuid(),
-            AddedById = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)),
+            AddedById = user != null ? Guid.Parse(user) : null,
             InstanceId = instance.Id,
             Name = fileData.FileName,
             VideoType = VideoType.FileUpload,

@@ -98,7 +98,7 @@ public class ConnectionMapping {
 
     public class InstanceConnection {
         public Guid? UserId { get; set; }
-        public string? UserName { get; set; }
+        public string UserName { get; set; }
         public string ConnectionId { get; set; }
         public bool IsLeader {get;set;}
         public int LeaderRank { get; set; }
