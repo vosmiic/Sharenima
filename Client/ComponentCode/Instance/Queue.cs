@@ -59,9 +59,17 @@ public partial class Queue : ComponentBase {
     protected override void OnParametersSet() => SetList();
 
     protected async void AddVideoToQueue() {
-        if (_authHttpClient == null) return;
-        //todo handle above
-        var addVideoResponse = await _authHttpClient.PostAsync($"queue?instanceId={InstanceId}&videoUrl={VideoUrl}", null);
+        HttpResponseMessage addVideoResponse;
+        if (PermissionService.CheckIfUserHasPermission(Permissions.Permission.AddVideo)) {
+            string url = $"queue?instanceId={InstanceId}&videoUrl={VideoUrl}";
+            if (_authHttpClient != null) {
+                addVideoResponse = await _authHttpClient.PostAsync(url, null);
+            } else {
+                addVideoResponse = await _anonymousHttpClient.PostAsync(url, null);
+            }
+        } else {
+            return;
+        }
 
         if (!addVideoResponse.IsSuccessStatusCode) {
             _toaster.Add($"Could not add video; {addVideoResponse.ReasonPhrase}", MatToastType.Danger, "Error");
@@ -72,10 +80,10 @@ public partial class Queue : ComponentBase {
     }
 
     protected async void UploadVideoToQueue(InputFileChangeEventArgs e) {
-        if (_uploadHttpClient == null) {
+        if (_uploadHttpClient == null && PermissionService.CheckIfUserHasPermission(Permissions.Permission.AddVideo)) {
             var authState = await authenticationStateTask;
-            if (authState.User.Identity is { IsAuthenticated: false }) return;
-            _uploadHttpClient = HttpClientFactory.CreateClient("auth");
+            _uploadHttpClient = HttpClientFactory.CreateClient(authState.User.Identity is { IsAuthenticated: false } ? "anonymous" : "auth");
+            ;
             _uploadHttpClient.Timeout = TimeSpan.FromHours(1);
         }
 
@@ -156,8 +164,9 @@ public partial class Queue : ComponentBase {
             QueuePlayerService.SetQueue(queueList);
             SetList();
             StateHasChanged();
-            if (QueuePlayerService.CurrentQueue.Count == 1)
+            if (QueuePlayerService.CurrentQueue.Count == 1) {
                 await RefreshService.CallPlayerRefreshRequested();
+            }
         });
 
         HubConnection.On<List<Sharenima.Shared.Queue.Queue>>("RemoveVideo", async (queueList) => {
