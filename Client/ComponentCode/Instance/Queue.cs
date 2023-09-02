@@ -172,8 +172,8 @@ public partial class Queue : ComponentBase {
         HubConnection.On<List<Sharenima.Shared.Queue.Queue>>("RemoveVideo", async (queueList) => {
             var existingQueue = QueuePlayerService.CurrentQueue;
             QueuePlayerService.SetQueue(queueList);
-            var currentQueue = QueuePlayerService.CurrentQueue.First(item => item.Order == 0);
-            if (currentQueue.Id != existingQueue.First(queue => queue.Order == 0).Id) {
+            var currentQueue = QueuePlayerService.CurrentQueue.FirstOrDefault(item => item.Order == 0);
+            if (currentQueue != null && currentQueue.Id != existingQueue.First(queue => queue.Order == 0).Id) {
                 // not the same video, so needs changing
                 await RunNextVideo();
             } else {
