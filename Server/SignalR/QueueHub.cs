@@ -146,7 +146,7 @@ public class QueueHub : Hub {
     public async Task SendProgressChange(Guid groupName, TimeSpan videoTime, bool seeked, Guid? videoId) {
         ConnectionMapping.InstanceConnection? instanceConnection = _connectionMapping.GetConnectionById(groupName, Context.ConnectionId);
         double? storedInstanceTimeDifference = _instanceTimeTracker.GetInstanceTime(groupName)?.TotalMilliseconds - videoTime.TotalMilliseconds;
-        if ((!seeked && instanceConnection is { IsLeader: true } && storedInstanceTimeDifference is not (> 1000 or < -1000))
+        if ((!seeked && instanceConnection is { IsLeader: true } && storedInstanceTimeDifference is not (> 1500 or < -1500))
             || seeked) {
             await using var context = await _contextFactory.CreateDbContextAsync();
             if (videoId == null || context.Queues.FirstOrDefault(queue => queue.Id == videoId) == null) return;
