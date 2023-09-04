@@ -40,6 +40,10 @@ function loadVideoFunctions(autoplay, currentVideoId, queue) {
     });
     
     uploadedPlayer.on('ready', function () {
+        var playerVolume = getPlayerVolumeCookie();
+        if (playerVolume != null) {
+            uploadedPlayer.setVolume(playerVolume);
+        }
         dotNetHelper.invokeMethodAsync('RequestInitialVideoTime').then((time) => {
             uploadedPlayer.seek(time);
         });
@@ -57,6 +61,10 @@ function loadVideoFunctions(autoplay, currentVideoId, queue) {
             updateServerTime(event.position);
         }
     });
+    
+    uploadedPlayer.on('volumeChanged', function (event) {
+        setPlayerVolumeCookie(event);
+    })
 }
 
 function onPlay() {
