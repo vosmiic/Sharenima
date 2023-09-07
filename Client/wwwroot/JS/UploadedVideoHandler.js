@@ -152,7 +152,7 @@ function playVideo() {
         } else {
             clearInterval(checkIfPLayingInterval);
         }
-    }, 50);
+    }, 500);
 }
 
 function uploadGetTime() {
