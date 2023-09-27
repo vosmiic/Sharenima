@@ -35,7 +35,7 @@ function loadVideoFunctions(autoplay, currentVideoId, queue) {
     })
     uploadedPlayer.on('seeked', function () {
         if (new Date() - lastExecution >= 100) {
-            updateBackendProgress(seekPosition);
+            updateBackendProgress(seekPosition, videoId, lastExecution);
         }
     });
     
@@ -83,11 +83,6 @@ function onComplete() {
 
 function uploadedVideoStateChange(state) {
     dotNetHelper.invokeMethodAsync('StateChange', state, videoId);
-}
-
-function updateBackendProgress(time) {
-    dotNetHelper.invokeMethodAsync('ProgressChange', videoId, time, true);
-    lastExecution = new Date();
 }
 
 function playFileUpload() {

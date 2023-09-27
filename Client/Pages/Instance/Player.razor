@@ -4,7 +4,9 @@
     switch (Video.VideoType) {
         case VideoType.YouTube:
             <div id="youtubeContainer" class="playerContainer">
-                <div id="player"></div>
+                <div class="container">
+                    <div id="player" data-plyr-provider="youtube" data-plyr-embed-id="@Video.Url"></div>
+                </div>
             </div>
             break;
         case VideoType.FileUpload:
