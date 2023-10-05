@@ -92,6 +92,9 @@ let lastUpdateTime = null;
 let fastLastUpdateTime = null;
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
+        
+        
+        
         var currentTime = getCurrentTime();
         if (currentTime && player.getPlayerState() !== 0 && player.getPlayerState() !== 2) {
             if (!initialLoad) {
@@ -105,9 +108,22 @@ setInterval(function () {
     }
 }, 1000)
 
+let lastStoredSystemTime = null;
+const updateInterval = 50;
+
 // below only handles seeked
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
+        if (lastStoredSystemTime == null) {
+            lastStoredSystemTime = new Date();
+        } else {
+            lastStoredSystemTime = new Date();
+            if (Math.abs((new Date().getTime() - lastStoredSystemTime.getTime()) - updateInterval) > (updateInterval / 2)) {
+                console.log("Lag detected! Presuming seek detection is false positive...")
+                return;
+            }
+        }
+        
         var currentTime = getCurrentTime();
         let playerPlaybackRate = player.getPlaybackRate();
         if (fastLastUpdateTime != null && Math.abs(currentTime - fastLastUpdateTime - 0.05) > 1.1 && playerPlaybackRate === 1) {
@@ -120,7 +136,7 @@ setInterval(function () {
             initialLoad = false;
         }
     }
-}, 50);
+}, updateInterval);
 
 //functions
 function playYT() {
