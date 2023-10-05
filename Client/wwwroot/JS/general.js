@@ -20,8 +20,3 @@ function setPlayerVolumeCookie(volume) {
     // store the volume cookie for 30 days
     document.cookie = getPlayerVolumeCookieName() + "=" + volume + "; expires=" + date.toUTCString() + "; path=/";
 }
-
-function updateBackendProgress(time, vidId, lastExecutionDate) {
-    dotNetHelper.invokeMethodAsync('ProgressChange', vidId, time, true);
-    lastExecutionDate = new Date();
-}

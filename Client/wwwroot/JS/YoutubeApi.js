@@ -1,24 +1,20 @@
 let initialVideoId;
 let comparisonVideoId;
 let autoplay;
-let youtubeLastExecution = new Date();
-
 
 function runYoutubeApi(videoId, playingState, dbVideoId) {
-    if (youtubeCheckIfPlayerExists()) return;
+//YouTube embed with YouTube Iframe API
     initialVideoId = videoId;
     comparisonVideoId = dbVideoId;
     autoplay = playingState;
-
-    onYouTubeIframeAPIReady();
     setTimeout(() => {
-        let existingTag = document.querySelector(".plyr");
+        let existingTag = document.querySelector("script[src='https://www.youtube.com/iframe_api']");
         if (existingTag) {
             var playerConnected = false;
             try {
-                playerConnected = player.embed.getIframe().isConnected;
+                playerConnected = player.getIframe().isConnected;
             } catch (_) {
-
+                
             }
             if (playerConnected) {
                 changeYTVideoSource(videoId);
@@ -26,7 +22,11 @@ function runYoutubeApi(videoId, playingState, dbVideoId) {
                 onYouTubeIframeAPIReady();
             }
         } else {
-            onYouTubeIframeAPIReady();
+            var tag = document.createElement('script');
+
+            tag.src = "https://www.youtube.com/iframe_api";
+            var firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
         }
     }, 1000);
 }
@@ -37,60 +37,47 @@ function setDotNetHelper(value) {
     dotNetHelper = value;
 }
 
-let player;
+// YouTube embed player details
+var player;
 
 function onYouTubeIframeAPIReady() {
-    if (youtubeCheckIfPlayerExists()) return;
-    player = new Plyr(document.getElementById('player'), {
-        playsinline: true
-    });
-
-    let ignoreFirst = true;
-    player.on('ready', (event) => {
-        if (ignoreFirst) {
-            // ignore the first ready call
-            ignoreFirst = false;
-            return;
+    player = new YT.Player('player', {
+        height: '390',
+        width: '640',
+        videoId: initialVideoId,
+        playerVars: {
+            'playsinline': 1,
+            'autohide': 1,
+            'controls': 1,
+            'iv_load_policy': 3,
+            'rel': 0
+        },
+        events: {
+            'onReady': youtubeOnReady,
+            'onStateChange': youtubeStateChange,
+            'onError': youtubeOnError
         }
-        youtubeOnReady(event);
-    });
-
-    player.on('statechange', (event) => {
-        youtubeStateChange(event.detail.code);
-    });
-
-    player.on('error', (event) => {
-        youtubeOnError(event.error);
     });
     
-    player.on('volumechange', (event) => {
-        setPlayerVolumeCookie(event.detail.plyr.volume * 100);
-    });
+    window.addEventListener("message", function (event) {
+        if (event.source === player.getIframe().contentWindow) {
+            var data = JSON.parse(event.data);
+            if (data.event === "infoDelivery" && data.info && data.info.volume) {
+               setPlayerVolumeCookie(data.info.volume);
+            }
+        }
 
-    let lastCheck = 0;
-    player.on('timeupdate', (event) => {
-        const difference = lastCheck - event.detail.plyr.currentTime;
-        if (Math.abs(difference) >= 1) {
-            dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, event.detail.plyr.currentTime, false);
-            lastCheck = event.detail.plyr.currentTime;
-        }
-    })
-    
-    player.on('seeked', (event) => {
-        if (new Date() - youtubeLastExecution >= 100) {
-            updateBackendProgress(event.detail.plyr.currentTime, comparisonVideoId, youtubeLastExecution);
-        }
     })
 }
 
 function youtubeOnReady(event) {
     var playerVolume = getPlayerVolumeCookie();
     if (playerVolume != null) {
-        player.volume = playerVolume / 100;
+        player.setVolume(playerVolume);
     }
     dotNetHelper.invokeMethodAsync('RequestInitialVideoTime').then((time) => {
-        player.embed.seekTo(time);
-        console.log(time);
+        event.target.seekTo(time);
+        pauseYT();
     });
 
     if (autoplay) {
@@ -100,47 +87,66 @@ function youtubeOnReady(event) {
     dotNetHelper.invokeMethodAsync('SetReady', true);
 }
 
-/*let lastUpdateTime = null;
+let initialLoad = true;
+let lastUpdateTime = null;
 let fastLastUpdateTime = null;
 setInterval(function () {
-    if (player !== 'undefined' && comparisonVideoId) {
+    if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
         var currentTime = getCurrentTime();
-        if (currentTime && !player.paused && !player.ended) {
+        if (currentTime && player.getPlayerState() !== 0 && player.getPlayerState() !== 2) {
             if (!initialLoad) {
-                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, false);
+                let playerPlaybackRate = player.getPlaybackRate();
+                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, lastUpdateTime != null && Math.abs(currentTime - lastUpdateTime - 1) > 0.2 && playerPlaybackRate === 1);
                 lastUpdateTime = currentTime;
                 fastLastUpdateTime = currentTime;
             }
             initialLoad = false;
         }
     }
-}, 1000)*/
+}, 1000)
+
+// below only handles seeked
+setInterval(function () {
+    if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
+        var currentTime = getCurrentTime();
+        let playerPlaybackRate = player.getPlaybackRate();
+        if (fastLastUpdateTime != null && Math.abs(currentTime - fastLastUpdateTime - 0.05) > 1.1 && playerPlaybackRate === 1) {
+            console.log(Math.abs(currentTime - fastLastUpdateTime - 0.05));
+            if (!initialLoad) {
+                dotNetHelper.invokeMethodAsync('ProgressChange', comparisonVideoId, currentTime, true);
+                lastUpdateTime = currentTime;
+                fastLastUpdateTime = currentTime;
+            }
+            initialLoad = false;
+        }
+    }
+}, 50);
 
 //functions
 function playYT() {
-    player.play();
+    player.playVideo();
     setTimeout(() => {
-        if (player.paused) {
+        if (player.getPlayerState() === -1) {
             // user must have not interacted with the site yet, got to mute and then play again
-            player.muted = true;
-            player.play();
+            player.mute();
+            player.playVideo();
         }
     }, 500);
 }
 
 function pauseYT() {
-    player.pause();
+    player.pauseVideo();
 }
 
 function getCurrentTime() {
-    return player.currentTime;
+    return player.getCurrentTime();
 }
 
 function setCurrentYoutubeVideoTime(time, currentVideoId) {
     if (currentVideoId === comparisonVideoId) {
         let success = true;
         try {
-            player.currentTime = time;
+            player.seekTo(time, true);
         } catch (e) {
             success = false;
         }
@@ -152,38 +158,29 @@ function setCurrentYoutubeVideoTime(time, currentVideoId) {
 
 function changeYTVideoSource(videoId) {
     try {
-        player.source = {
-            "type": "video",
-            "sources": [
-                {
-                    "src": videoId,
-                    "provider": "youtube"
-                }
-            ]
-        };
+        player.loadVideoById(videoId);
         dotNetHelper.invokeMethodAsync('SetReady', true);
     } catch {
     }
 }
 
 function youtubeStateChange(event) {
-    dotNetHelper.invokeMethodAsync('StateChange', event, comparisonVideoId);
+    dotNetHelper.invokeMethodAsync('StateChange', event.data, comparisonVideoId);
 }
 
 function youtubeDestroy() {
-    player.destroy();
+    document.getElementById("youtubeContainer").textContent = '';
 }
 
 function youtubeOnError(error) {
-    dotNetHelper.invokeMethodAsync('OnPlayerError', error, comparisonVideoId);
+    dotNetHelper.invokeMethodAsync('OnPlayerError', error.data, comparisonVideoId);
 }
 
 function youtubeCheckIfPlayerExists() {
     try {
-        var test = player.source;
+        player.getIframe();
         return true;
-    } catch (e) {
-        console.log(e);
+    } catch (_) {
         return false;
     }
 }
