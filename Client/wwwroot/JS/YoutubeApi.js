@@ -114,15 +114,13 @@ const updateInterval = 50;
 // below only handles seeked
 setInterval(function () {
     if (typeof YT !== 'undefined' && player !== 'undefined' && comparisonVideoId) {
-        if (lastStoredSystemTime == null) {
+        if (lastStoredSystemTime != null && Math.abs((new Date().getTime() - lastStoredSystemTime.getTime()) - updateInterval) > (updateInterval / 2)) {
+            console.log("Lag detected! Presuming seek detection is false positive...")
+            console.log(Math.abs((new Date().getTime() - lastStoredSystemTime.getTime()) - updateInterval));
             lastStoredSystemTime = new Date();
-        } else {
-            lastStoredSystemTime = new Date();
-            if (Math.abs((new Date().getTime() - lastStoredSystemTime.getTime()) - updateInterval) > (updateInterval / 2)) {
-                console.log("Lag detected! Presuming seek detection is false positive...")
-                return;
-            }
+            return;
         }
+        lastStoredSystemTime = new Date();
         
         var currentTime = getCurrentTime();
         let playerPlaybackRate = player.getPlaybackRate();
