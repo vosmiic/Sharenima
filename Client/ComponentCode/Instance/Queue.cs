@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.JSInterop;
 using Sharenima.Shared;
 using Sharenima.Shared.Helpers;
 using File = Sharenima.Shared.File;
@@ -22,6 +23,7 @@ public partial class Queue : ComponentBase {
     [Inject] protected HubService HubService { get; set; }
     [Inject] private PermissionService PermissionService { get; set; }
     [Inject] private ILocalStorageService _localStorageService { get; set; }
+    [Inject] private IJSRuntime _jsRuntime { get; set; }
     [Parameter] public Guid InstanceId { get; set; }
     [Parameter] public EventCallback<ICollection<Sharenima.Shared.Queue.Queue>?> CurrentQueueChanged { get; set; }
     [Parameter] public Player? PlayerSibling { get; set; }
@@ -83,7 +85,6 @@ public partial class Queue : ComponentBase {
         if (_uploadHttpClient == null && PermissionService.CheckIfUserHasPermission(Permissions.Permission.AddVideo)) {
             var authState = await authenticationStateTask;
             _uploadHttpClient = HttpClientFactory.CreateClient(authState.User.Identity is { IsAuthenticated: false } ? "anonymous" : "auth");
-            ;
             _uploadHttpClient.Timeout = TimeSpan.FromHours(1);
         }
 
@@ -112,7 +113,10 @@ public partial class Queue : ComponentBase {
     }
 
     protected async void RemoveFromVideoQueue(Guid queueId) {
-        if (_authHttpClient == null) return;
+        if (_authHttpClient == null) {
+            _toaster.Add("You are not logged in!", MatToastType.Danger, "Error");
+            return;
+        };
         //todo handle above
         var removeVideoResponse = await _authHttpClient.DeleteAsync($"queue?instanceId={InstanceId}&queueId={queueId}");
 
