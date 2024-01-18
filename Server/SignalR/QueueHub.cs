@@ -177,5 +177,13 @@ public class QueueHub : Hub {
         }
     }
 
+    public void RevokeLeadership(Guid groupName) {
+        _connectionMapping.RevokeLeadership(groupName, Context.ConnectionId, true);
+    }
+
+    public void EnableLeader(Guid groupName, bool attemptToPromote) {
+        _connectionMapping.EnableLeader(groupName, Context.ConnectionId, attemptToPromote);
+    }
+
     public string? GetConfigurationValue(ConfigKey configKey) => _configuration[$"Stream:{configKey.ToString()}"];
 }

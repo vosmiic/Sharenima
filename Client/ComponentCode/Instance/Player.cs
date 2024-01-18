@@ -224,6 +224,7 @@ public partial class Player : ComponentBase {
         string? playUrl = await httpResponseMessage.Content.ReadAsStringAsync();
         bool streamAlreadyPlaying = StreamUrl != null;
         StreamUrl = playUrl?.Replace("{User}", StreamService.streamUsername);
+        await HubConnection.SendAsync("RevokeLeadership", InstanceId, cancellationToken: cancellationToken);
         if (streamAlreadyPlaying) {
             await _jsRuntime.InvokeVoidAsync("loadNewStream", StreamUrl);
         } else {
@@ -236,6 +237,7 @@ public partial class Player : ComponentBase {
     }
 
     public async Task CloseStreamClicked() {
+        await HubConnection.SendAsync("EnableLeader", InstanceId, true);
         StreamUrl = null;
         _initialVideoLoad = true;
         await NewVideo(new CancellationToken());
