@@ -174,7 +174,7 @@ public partial class Player : ComponentBase {
                 case State.Playing:
                     switch (Video?.VideoType) {
                         case VideoType.YouTube:
-                            await _jsRuntime.InvokeVoidAsync("playYT");
+                            await _jsRuntime.InvokeVoidAsync("ytCommandFromHub", 1);
                             break;
                         case VideoType.FileUpload:
                             await _jsRuntime.InvokeVoidAsync("playFileUpload");
@@ -185,7 +185,7 @@ public partial class Player : ComponentBase {
                 case State.Paused:
                     switch (Video?.VideoType) {
                         case VideoType.YouTube:
-                            await _jsRuntime.InvokeVoidAsync("pauseYT");
+                            await _jsRuntime.InvokeVoidAsync("ytCommandFromHub", 2);
                             break;
                         case VideoType.FileUpload:
                             await _jsRuntime.InvokeVoidAsync("pauseFileUpload");
