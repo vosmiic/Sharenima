@@ -15,7 +15,7 @@ using Sharenima.Shared.Queue;
 
 namespace Sharenima.Server.SignalR;
 
-public class QueueHub : Hub {
+public class QueueHub : BaseHub {
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
     private readonly IDbContextFactory<ApplicationDbContext> _applicationDbContextFactory;
     private readonly ConnectionMapping _connectionMapping;
@@ -35,26 +35,22 @@ public class QueueHub : Hub {
     public override async Task OnConnectedAsync() {
         string? userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid? parsedUserId = userId != null ? Guid.Parse(userId) : null;
-        var httpContext = Context.GetHttpContext();
-        if (httpContext == null) return;
-        var instanceId = httpContext.Request.Query["instanceId"];
-        if (instanceId.Count == 0) return;
-        Guid parsedInstanceId = Guid.Parse(instanceId[0]);
         string? username = null;
         int leaderRank = 0;
+        if (InstanceId == null) return;
         if (Context.User?.IsAuthenticated() == true) {
             await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
             ApplicationUser? user = context.Users.Include(au => au.Roles).FirstOrDefault(user => user.Id == userId);
             if (user == null) return;
             username = user.UserName;
-            leaderRank = user.Roles.Any(role => role.InstanceId == parsedInstanceId && role.Permission == Permissions.Permission.Administrator) ? 2 : 1;
+            leaderRank = user.Roles.Any(role => role.InstanceId == InstanceId && role.Permission == Permissions.Permission.Administrator) ? 2 : 1;
         }
 
-        if (_instanceTimeTracker.GetInstanceTime(parsedInstanceId) == null) {
+        if (_instanceTimeTracker.GetInstanceTime(InstanceId.Value) == null) {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == parsedInstanceId);
+            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == InstanceId);
             if (instance == null) return;
-            _instanceTimeTracker.Add(parsedInstanceId, instance.VideoTime);
+            _instanceTimeTracker.Add(InstanceId.Value, instance.VideoTime);
         }
 
         if (username == null) {
@@ -73,10 +69,10 @@ public class QueueHub : Hub {
             }
         }
         
-        (string? oldLeader, string? newLeader) instanceLeadership = _connectionMapping.Add(parsedInstanceId, Context.ConnectionId, leaderRank, parsedUserId, username);
+        (string? oldLeader, string? newLeader) instanceLeadership = _connectionMapping.Add(InstanceId.Value, Context.ConnectionId, leaderRank, parsedUserId, username);
         await LeadershipChange(instanceLeadership.oldLeader, instanceLeadership.newLeader);
-        _logger.LogInformation($"Added {username} to instance {instanceId[0]} connection map");
-        await Clients.Group(instanceId[0]).SendAsync("UserJoined", username);
+        _logger.LogInformation($"Added {username} to instance {InstanceId} connection map");
+        await Clients.Group(InstanceId.Value.ToString()).SendAsync("UserJoined", username);
         await Clients.Caller.SendAsync("UserJoined", username);
         await base.OnConnectedAsync();
     }
