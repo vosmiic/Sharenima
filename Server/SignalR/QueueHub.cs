@@ -22,7 +22,7 @@ public class QueueHub : BaseHub {
     private readonly IConfiguration _configuration;
     private readonly InstanceTimeTracker _instanceTimeTracker;
 
-    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger, IMemoryCache memoryCache, IConfiguration configuration, IDbContextFactory<ApplicationDbContext> applicationDbContextFactory, InstanceTimeTracker instanceTimeTracker) {
+    public QueueHub(IDbContextFactory<GeneralDbContext> contextFactory, ConnectionMapping connectionMapping, ILogger<QueueHub> logger, IConfiguration configuration, IDbContextFactory<ApplicationDbContext> applicationDbContextFactory, InstanceTimeTracker instanceTimeTracker) {
         _contextFactory = contextFactory;
         _connectionMapping = connectionMapping;
         _logger = logger;
