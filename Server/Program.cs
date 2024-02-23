@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +13,7 @@ using Sharenima.Server.Handlers;
 using Sharenima.Server.Models;
 using Sharenima.Server.Services;
 using Sharenima.Server.SignalR;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +61,7 @@ builder.Services.AddScoped<IAuthorizationHandler, ChangeProgressHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, UploadVideoHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, AddVideoHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, AdministratorHandler>();
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")));
 
 
 builder.Services.AddAuthorization(options => {
