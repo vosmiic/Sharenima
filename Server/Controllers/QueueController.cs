@@ -162,50 +162,6 @@ public class QueueController : ControllerBase {
         return Ok();
     }
 
-    private async Task ConvertUploadedFile(bool forVideo, string mediaDownloadLocation, DirectoryInfo downloadDirectory, Queue queue, string hostedLocation, FileHelper fileHelper, Guid instanceId, string connectionId, List<QueueSubtitles> queueSubtitles) {
-        bool converted;
-        if (forVideo) {
-            converted = await FfmpegHelper.ConvertVideo(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"), videoCodec: VideoCodec.vp9);
-        } else {
-            converted = await FfmpegHelper.ConvertAudio(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.flac"), audioCodec: AudioCodec.flac);
-        }
-
-        if (converted) {
-            _logger.LogInformation("Successfully converted media");
-            queue.MediaType = forVideo ? "video/webm" : "audio/flac";
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            await AddUploadedVideoToDb(queue, hostedLocation, forVideo ? ".webm" : ".flac", fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, forVideo, queueSubtitles);
-            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
-        } else {
-            _logger.LogInformation("Error converting media");
-            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Error Uploading Media", "Could not upload the media; could not be converted to appropriate web media format", MatToastType.Danger);
-        }
-    }
-
-    private async Task AddUploadedVideoToDb(Queue queue, string hostedLocation, string extension, FileHelper fileHelper, string videoDownloadLocation, DirectoryInfo downloadDirectory, GeneralDbContext context, Guid instanceId, bool forVideo, List<QueueSubtitles> queueSubtitles) {
-        queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
-        if (forVideo) {
-            string? thumbnailFileName = await fileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
-            queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
-        }
-
-        context.Queues.Add(queue);
-        await context.SaveChangesAsync();
-
-        var subtitleQueue = context.Queues.Where(q => q.Id == queue.Id).Include(q => q.Subtitles).First();
-        foreach (QueueSubtitles queueSubtitle in queueSubtitles) {
-            subtitleQueue.Subtitles.Add(queueSubtitle);
-        }
-
-        await context.SaveChangesAsync();
-
-        _logger.LogInformation($"Video {queue.Name} added to instance {instanceId} queue");
-        queue.Subtitles = queue.Subtitles.Select(item => new QueueSubtitles { FileLocation = item.FileLocation }).ToList();
-        // fetch an updated list here because file uploads may have taken a long time and queue may have been modified during the process
-        var updatedInstanceQueues = await context.Instances.Where(instance => instance.Id == instanceId).Include(p => p.VideoQueue).ThenInclude(q => q.Subtitles).FirstOrDefaultAsync();
-        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", updatedInstanceQueues?.VideoQueue);
-    }
-
     [HttpGet]
     public async Task<ActionResult> GetInstanceQueue(Guid instanceId) {
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -258,5 +214,49 @@ public class QueueController : ControllerBase {
         await context.SaveChangesAsync();
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("QueueOrderChange", dbQueueList.ToList());
         return Ok();
+    }
+
+    private async Task ConvertUploadedFile(bool forVideo, string mediaDownloadLocation, DirectoryInfo downloadDirectory, Queue queue, string hostedLocation, FileHelper fileHelper, Guid instanceId, string connectionId, List<QueueSubtitles> queueSubtitles) {
+        bool converted;
+        if (forVideo) {
+            converted = await FfmpegHelper.ConvertVideo(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"), videoCodec: VideoCodec.vp9);
+        } else {
+            converted = await FfmpegHelper.ConvertAudio(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.flac"), audioCodec: AudioCodec.flac);
+        }
+
+        if (converted) {
+            _logger.LogInformation("Successfully converted media");
+            queue.MediaType = forVideo ? "video/webm" : "audio/flac";
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            await AddUploadedVideoToDb(queue, hostedLocation, forVideo ? ".webm" : ".flac", fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, forVideo, queueSubtitles);
+            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
+        } else {
+            _logger.LogInformation("Error converting media");
+            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Error Uploading Media", "Could not upload the media; could not be converted to appropriate web media format", MatToastType.Danger);
+        }
+    }
+
+    private async Task AddUploadedVideoToDb(Queue queue, string hostedLocation, string extension, FileHelper fileHelper, string videoDownloadLocation, DirectoryInfo downloadDirectory, GeneralDbContext context, Guid instanceId, bool forVideo, List<QueueSubtitles> queueSubtitles) {
+        queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
+        if (forVideo) {
+            string? thumbnailFileName = await fileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
+            queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
+        }
+
+        context.Queues.Add(queue);
+        await context.SaveChangesAsync();
+
+        var subtitleQueue = context.Queues.Where(q => q.Id == queue.Id).Include(q => q.Subtitles).First();
+        foreach (QueueSubtitles queueSubtitle in queueSubtitles) {
+            subtitleQueue.Subtitles.Add(queueSubtitle);
+        }
+
+        await context.SaveChangesAsync();
+
+        _logger.LogInformation($"Video {queue.Name} added to instance {instanceId} queue");
+        queue.Subtitles = queue.Subtitles.Select(item => new QueueSubtitles { FileLocation = item.FileLocation }).ToList();
+        // fetch an updated list here because file uploads may have taken a long time and queue may have been modified during the process
+        var updatedInstanceQueues = await context.Instances.Where(instance => instance.Id == instanceId).Include(p => p.VideoQueue).ThenInclude(q => q.Subtitles).FirstOrDefaultAsync();
+        await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", updatedInstanceQueues?.VideoQueue);
     }
 }
