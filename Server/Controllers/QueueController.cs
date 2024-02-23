@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using MatBlazor;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +10,11 @@ using NuGet.Packaging;
 using Sharenima.Server.Data;
 using Sharenima.Server.Helpers;
 using Sharenima.Server.Models;
+using Sharenima.Server.Services;
 using Sharenima.Server.SignalR;
 using Sharenima.Shared;
 using Sharenima.Shared.Queue;
+using StackExchange.Redis;
 using Xabe.FFmpeg;
 using File = Sharenima.Shared.File;
 using Instance = Sharenima.Shared.Instance;
@@ -27,16 +30,19 @@ public class QueueController : ControllerBase {
     private readonly IHubContext<QueueHub> _hubContext;
     private readonly ILogger<QueueController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly InstanceTimeTracker _instanceTimeTracker;
+    private readonly IConnectionMultiplexer _connectionMultiplexer;
 
-    public QueueController(HttpClient httpClient,
-        IDbContextFactory<GeneralDbContext> contextFactory,
-        IHubContext<QueueHub> hubContext,
-        ILogger<QueueController> logger, IConfiguration configuration) {
+    public QueueController(HttpClient httpClient, IDbContextFactory<GeneralDbContext> contextFactory,
+        IHubContext<QueueHub> hubContext, ILogger<QueueController> logger, IConfiguration configuration,
+        InstanceTimeTracker instanceTimeTracker, IConnectionMultiplexer connectionMultiplexer) {
         _httpClient = httpClient;
         _contextFactory = contextFactory;
         _hubContext = hubContext;
         _logger = logger;
         _configuration = configuration;
+        _instanceTimeTracker = instanceTimeTracker;
+        _connectionMultiplexer = connectionMultiplexer;
     }
 
     [HttpPost]
@@ -214,6 +220,68 @@ public class QueueController : ControllerBase {
         await context.SaveChangesAsync();
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("QueueOrderChange", dbQueueList.ToList());
         return Ok();
+    }
+
+    [HttpPost]
+    [Route("statechange")]
+    [Authorize(Policy = "ChangeProgress")]
+    public async Task<ActionResult> ChangeInstanceState(Guid instanceId, State playerState, Guid queueId) {
+        IDatabase redisDatabase = _connectionMultiplexer.GetDatabase();
+        string redisStateChangeLockKey = RedisHelper.InstanceStateChangeKey(instanceId);
+        if (redisDatabase.KeyExists(redisStateChangeLockKey)) {
+            return StatusCode(500, JsonSerializer.Serialize(new ErrorResponse {
+                Reason = "Too many state change requests at once! Please try again.",
+            }));
+        }
+
+        redisDatabase.StringSet(redisStateChangeLockKey, true);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
+        if (queue != null) {
+            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
+            if (playerState == State.Ended) {
+                context.Remove(queue);
+                SortQueueOrder(context, queue.InstanceId);
+                if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Development")
+                    if (queue.VideoType == VideoType.FileUpload) {
+                        FileHelper.DeleteFile(queue.Url, _configuration, _logger);
+                        if (queue.Thumbnail != null)
+                            FileHelper.DeleteFile(queue.Thumbnail, _configuration, _logger);
+                    }
+
+                if (instance != null) {
+                    instance.VideoTime = TimeSpan.Zero;
+                    _instanceTimeTracker.Update(instance.Id, TimeSpan.Zero, true);
+                }
+            }
+
+            if (instance != null) {
+                _logger.LogInformation($"Updating instance {instance.Id} state in database");
+                instance.PlayerState = playerState;
+            }
+
+            await context.SaveChangesAsync();
+            await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("ReceiveStateChange", playerState);
+        }
+
+        redisDatabase.KeyDelete(redisStateChangeLockKey);
+
+        return new OkResult();
+    }
+
+    private void SortQueueOrder(GeneralDbContext generalDbContext, Guid instanceId) {
+        var queues = generalDbContext.Queues.Where(queue => queue.InstanceId == instanceId).AsEnumerable().Where(queue => generalDbContext.Entry(queue).State != EntityState.Deleted).OrderBy(queue => queue.Order).ToList();
+
+        for (int i = 0; i < queues.Count(); i++) {
+            if (i == 0) {
+                queues[i].Order = 0;
+                continue;
+            }
+
+            int previousOrder = queues[i - 1].Order;
+            queues[i].Order = previousOrder + 1;
+        }
     }
 
     private async Task ConvertUploadedFile(bool forVideo, string mediaDownloadLocation, DirectoryInfo downloadDirectory, Queue queue, string hostedLocation, FileHelper fileHelper, Guid instanceId, string connectionId, List<QueueSubtitles> queueSubtitles) {

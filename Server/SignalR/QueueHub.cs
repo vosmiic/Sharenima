@@ -4,7 +4,6 @@ using Duende.IdentityServer.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Sharenima.Server.Data;
 using Sharenima.Server.Helpers;
 using Sharenima.Server.Models;
@@ -106,39 +105,6 @@ public class QueueHub : BaseHub {
     }
 
     [Authorize(Policy = "ChangeProgress")]
-    public async Task SendStateChange(string groupName, State playerState, Guid queueId) {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-
-        Queue? queue = context.Queues.FirstOrDefault(queue => queue.Id == queueId);
-        if (queue != null) {
-            Instance? instance = await context.Instances.FirstOrDefaultAsync(instance => instance.Id == queue.InstanceId);
-            if (playerState == State.Ended) {
-                context.Remove(queue);
-                SortQueueOrder(context, queue.InstanceId);
-                if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Development")
-                    if (queue.VideoType == VideoType.FileUpload) {
-                        FileHelper.DeleteFile(queue.Url, _configuration, _logger);
-                        if (queue.Thumbnail != null)
-                            FileHelper.DeleteFile(queue.Thumbnail, _configuration, _logger);
-                    }
-
-                if (instance != null) {
-                    instance.VideoTime = TimeSpan.Zero;
-                    _instanceTimeTracker.Update(instance.Id, TimeSpan.Zero, true);
-                }
-            }
-
-            if (instance != null) {
-                _logger.LogInformation($"Updating instance {instance.Id} state in database");
-                instance.PlayerState = playerState;
-            }
-
-            await context.SaveChangesAsync();
-            await Clients.Group(groupName).SendAsync("ReceiveStateChange", playerState);
-        }
-    }
-
-    [Authorize(Policy = "ChangeProgress")]
     public async Task SendProgressChange(Guid groupName, TimeSpan videoTime, bool seeked, Guid? videoId) {
         ConnectionMapping.InstanceConnection? instanceConnection = _connectionMapping.GetConnectionById(groupName, Context.ConnectionId);
         double? storedInstanceTimeDifference = _instanceTimeTracker.GetInstanceTime(groupName)?.TotalMilliseconds - videoTime.TotalMilliseconds;
@@ -156,20 +122,6 @@ public class QueueHub : BaseHub {
         } else {
             // something weird is happening, rewind the user
             await Clients.Caller.SendAsync("ReceiveProgressChange", _instanceTimeTracker.GetInstanceTime(groupName));
-        }
-    }
-
-    private void SortQueueOrder(GeneralDbContext generalDbContext, Guid instanceId) {
-        var queues = generalDbContext.Queues.Where(queue => queue.InstanceId == instanceId).AsEnumerable().Where(queue => generalDbContext.Entry(queue).State != EntityState.Deleted).OrderBy(queue => queue.Order).ToList();
-
-        for (int i = 0; i < queues.Count(); i++) {
-            if (i == 0) {
-                queues[i].Order = 0;
-                continue;
-            }
-
-            int previousOrder = queues[i - 1].Order;
-            queues[i].Order = previousOrder + 1;
         }
     }
 

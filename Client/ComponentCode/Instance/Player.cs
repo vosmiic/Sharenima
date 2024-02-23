@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using MatBlazor;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
 using Sharenima.Client.Models;
@@ -12,6 +13,7 @@ using Sharenima.Shared.Queue;
 namespace Sharenima.Client.ComponentCode;
 
 public partial class Player : ComponentBase {
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
     [Inject] private IJSRuntime _jsRuntime { get; set; }
     [Inject] private QueuePlayerService QueuePlayerService { get; set; }
     [Inject] protected RefreshService RefreshService { get; set; }
@@ -30,14 +32,18 @@ public partial class Player : ComponentBase {
     private DotNetObjectReference<Player>? objRef;
     private bool _initialVideoLoad = true;
     private bool _videoReady;
+    private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
 
     [JSInvokable]
-    public void StateChange(int value, Guid videoId) {
+    public async Task StateChange(int value, int previousValue, Guid videoId) {
         if (videoId == Video?.Id && value is > -1 and < 3 && PermissionService.CheckIfUserHasPermission(Permissions.Permission.ChangeProgress)) {
             playerState = (State)value;
             Console.WriteLine($"State changed: {playerState}");
-            HubConnection.SendAsync("SendStateChange", InstanceId, playerState, Video.Id);
+            var updateResponse = await (_authHttpClient ?? _anonymousHttpClient).PostAsync($"queue/statechange?instanceId={InstanceId}&playerState={playerState}&queueId={Video.Id}", null);
+            if (!updateResponse.IsSuccessStatusCode) {
+                await _jsRuntime.InvokeVoidAsync("ytCommandFromHub", previousValue);
+            }
             if (value is 0)
                 Console.WriteLine($"sent video {Video.Id} has ended alert");
         }
@@ -92,6 +98,10 @@ public partial class Player : ComponentBase {
         objRef = DotNetObjectReference.Create(this);
         await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
         _anonymousHttpClient = HttpClientFactory.CreateClient("anonymous");
+        var authState = await authenticationStateTask;
+        if (authState.User.Identity is { IsAuthenticated: true }) {
+            _authHttpClient = HttpClientFactory.CreateClient("auth");
+        }
 
         await Hub();
     }
