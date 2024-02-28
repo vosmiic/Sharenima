@@ -55,7 +55,6 @@ if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Development
 }
 
 builder.Services.AddSingleton<ConnectionMapping>();
-builder.Services.AddSingleton<InstanceTimeTracker>();
 
 builder.Services.AddScoped<IAuthorizationHandler, ChangeProgressHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, UploadVideoHandler>();
