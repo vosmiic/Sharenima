@@ -28,21 +28,21 @@ public class QueueController : ControllerBase {
     private readonly HttpClient _httpClient;
     private readonly IDbContextFactory<GeneralDbContext> _contextFactory;
     private readonly IHubContext<QueueHub> _hubContext;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<QueueController> _logger;
     private readonly IConfiguration _configuration;
-    private readonly InstanceTimeTracker _instanceTimeTracker;
     private readonly IConnectionMultiplexer _connectionMultiplexer;
 
     public QueueController(HttpClient httpClient, IDbContextFactory<GeneralDbContext> contextFactory,
-        IHubContext<QueueHub> hubContext, ILogger<QueueController> logger, IConfiguration configuration,
-        InstanceTimeTracker instanceTimeTracker, IConnectionMultiplexer connectionMultiplexer) {
+        IHubContext<QueueHub> hubContext, IConfiguration configuration, IConnectionMultiplexer connectionMultiplexer,
+        ILoggerFactory loggerFactory) {
         _httpClient = httpClient;
         _contextFactory = contextFactory;
         _hubContext = hubContext;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger<QueueController>();
         _configuration = configuration;
-        _instanceTimeTracker = instanceTimeTracker;
         _connectionMultiplexer = connectionMultiplexer;
+        _loggerFactory = loggerFactory;
     }
 
     [HttpPost]
@@ -251,8 +251,8 @@ public class QueueController : ControllerBase {
                     }
 
                 if (instance != null) {
-                    instance.VideoTime = TimeSpan.Zero;
-                    _instanceTimeTracker.Update(instance.Id, TimeSpan.Zero, true);
+                    InstanceTimeTracker instanceTimeTracker = new InstanceTimeTracker(_loggerFactory, _connectionMultiplexer);
+                    instanceTimeTracker.Remove(instance.Id);
                 }
             }
 

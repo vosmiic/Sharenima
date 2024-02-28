@@ -8,6 +8,7 @@ using Sharenima.Server.Data;
 using Sharenima.Server.Models;
 using Sharenima.Server.Services;
 using Sharenima.Shared;
+using StackExchange.Redis;
 
 namespace Sharenima.Server.Controllers;
 
@@ -18,16 +19,21 @@ public class InstanceController : ControllerBase {
     private readonly IDbContextFactory<ApplicationDbContext> _applicationDbContextFactory;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ConnectionMapping _connectionMapping;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<InstanceController> _logger;
+    private readonly IConnectionMultiplexer _connectionMultiplexer;
 
     public InstanceController(IDbContextFactory<GeneralDbContext> contextFactory,
         UserManager<ApplicationUser> userManager, ConnectionMapping connectionMapping,
-        ILogger<InstanceController> logger, IDbContextFactory<ApplicationDbContext> applicationDbContextFactory) {
+        ILoggerFactory loggerFactory, IDbContextFactory<ApplicationDbContext> applicationDbContextFactory,
+        IConnectionMultiplexer connectionMultiplexer) {
         _contextFactory = contextFactory;
         _userManager = userManager;
         _connectionMapping = connectionMapping;
-        _logger = logger;
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<InstanceController>();
         _applicationDbContextFactory = applicationDbContextFactory;
+        _connectionMultiplexer = connectionMultiplexer;
     }
 
     /// <summary>
@@ -72,6 +78,10 @@ public class InstanceController : ControllerBase {
                         instanceWithUserPermissions.UserPermissions.Add(permission);
                 }
             }
+
+            InstanceTimeTracker instanceTimeTracker = new InstanceTimeTracker(_loggerFactory, _connectionMultiplexer);
+            TimeSpan? instanceTime = instanceTimeTracker.GetInstanceTime(instance.Id);
+            instanceWithUserPermissions.VideoTime = instanceTime ?? TimeSpan.Zero;
 
             return Ok(instanceWithUserPermissions);
         }
