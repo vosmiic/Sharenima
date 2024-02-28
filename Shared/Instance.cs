@@ -18,10 +18,9 @@ public class Instance : Base {
         protected set => permissions = value;
     }
 
-    public TimeSpan VideoTime { get; set; }
     public State? PlayerState { get; set; }
 }
 
-public class InstanceWithUserPermissions : Instance {
+public class InstanceWithUserPermissions : InstanceViewModel {
     public List<Permissions.Permission> UserPermissions { get; set; }
 }

@@ -25,7 +25,7 @@ public partial class Instance : ComponentBase {
     [Inject] private IJSRuntime _jsRuntime { get; set; }
     [Parameter] public string InstanceId { get; set; }
     protected HubConnection? _hubConnection;
-    protected Sharenima.Shared.Instance? SelectedInstance { get; set; }
+    protected InstanceViewModel? SelectedInstance { get; set; }
     private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
     protected bool HideQueue { get; set; }
