@@ -12,17 +12,27 @@ public class InstanceTimeTracker {
     [SetUp]
     public void Setup() {
         var mockMultiplexer = new Mock<IConnectionMultiplexer>();
-        mockMultiplexer.Setup(item => item.IsConnected).Returns(false);
-        mockMultiplexer.Setup(connectionMultiplexer => connectionMultiplexer.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(new MockDatabase());
+        mockMultiplexer.Setup(cm => cm.IsConnected).Returns(false);
+        mockMultiplexer.Setup(cm => cm.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(new MockDatabase());
         _connectionMultiplexerMock = mockMultiplexer;
         _LoggerFactory = new NullLoggerFactory();
     }
 
     [Test]
-    public void Test() {
+    public void TestInsertingAnInstanceTime() {
+        UpsertInstanceTime(new Server.Services.InstanceTimeTracker(_LoggerFactory, _connectionMultiplexerMock.Object));
+    }
+
+    [Test]
+    public void TestGettingAnInstancesTime() {
         Server.Services.InstanceTimeTracker instanceTimeTracker = new Server.Services.InstanceTimeTracker(_LoggerFactory, _connectionMultiplexerMock.Object);
+        Assert.IsTrue(instanceTimeTracker.GetInstanceTime(UpsertInstanceTime(instanceTimeTracker)).HasValue);
+    }
+
+    private Guid UpsertInstanceTime(Server.Services.InstanceTimeTracker instanceTimeTracker) {
+        instanceTimeTracker = new Server.Services.InstanceTimeTracker(_LoggerFactory, _connectionMultiplexerMock.Object);
         Guid instanceId = new Guid();
         instanceTimeTracker.Upsert(instanceId, TimeSpan.FromHours(1));
-        Assert.IsTrue(instanceTimeTracker.GetInstanceTime(instanceId).HasValue);
+        return instanceId;
     }
 }
