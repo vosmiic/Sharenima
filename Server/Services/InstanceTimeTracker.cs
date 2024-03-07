@@ -28,9 +28,9 @@ public class InstanceTimeTracker {
     /// Delete instance video time.
     /// </summary>
     /// <param name="instanceId">ID of the instance to delete the video time of.</param>
-    public void Remove(Guid instanceId) {
+    public bool Remove(Guid instanceId) {
         IDatabase database = _connectionMultiplexer.GetDatabase();
-        database.KeyDelete(RedisHelper.InstanceVideoTimeKey(instanceId));
+        return database.KeyDelete(RedisHelper.InstanceVideoTimeKey(instanceId));
     }
 
     /// <summary>

@@ -8,6 +8,7 @@ namespace Sharenima.UnitTests.HelperUnitTests;
 public class InstanceTimeTracker {
     private Mock<IConnectionMultiplexer> _connectionMultiplexerMock { get; set; }
     private NullLoggerFactory _LoggerFactory { get; set; }
+    private Server.Services.InstanceTimeTracker _instanceTimeTracker { get; set; }
 
     [SetUp]
     public void Setup() {
@@ -16,23 +17,27 @@ public class InstanceTimeTracker {
         mockMultiplexer.Setup(cm => cm.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(new MockDatabase());
         _connectionMultiplexerMock = mockMultiplexer;
         _LoggerFactory = new NullLoggerFactory();
+        _instanceTimeTracker = new Server.Services.InstanceTimeTracker(_LoggerFactory, _connectionMultiplexerMock.Object);
     }
 
     [Test]
     public void TestInsertingAnInstanceTime() {
-        UpsertInstanceTime(new Server.Services.InstanceTimeTracker(_LoggerFactory, _connectionMultiplexerMock.Object));
+        UpsertInstanceTime();
     }
 
     [Test]
     public void TestGettingAnInstancesTime() {
-        Server.Services.InstanceTimeTracker instanceTimeTracker = new Server.Services.InstanceTimeTracker(_LoggerFactory, _connectionMultiplexerMock.Object);
-        Assert.IsTrue(instanceTimeTracker.GetInstanceTime(UpsertInstanceTime(instanceTimeTracker)).HasValue);
+        Assert.IsTrue(_instanceTimeTracker.GetInstanceTime(UpsertInstanceTime()).HasValue);
     }
 
-    private Guid UpsertInstanceTime(Server.Services.InstanceTimeTracker instanceTimeTracker) {
-        instanceTimeTracker = new Server.Services.InstanceTimeTracker(_LoggerFactory, _connectionMultiplexerMock.Object);
+    [Test]
+    public void TestRemovingAnInstanceTime() {
+        Assert.IsTrue(_instanceTimeTracker.Remove(UpsertInstanceTime()));
+    }
+
+    private Guid UpsertInstanceTime() {
         Guid instanceId = new Guid();
-        instanceTimeTracker.Upsert(instanceId, TimeSpan.FromHours(1));
+        _instanceTimeTracker.Upsert(instanceId, TimeSpan.FromHours(1));
         return instanceId;
     }
 }

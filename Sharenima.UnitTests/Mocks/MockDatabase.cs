@@ -1141,7 +1141,7 @@ public class MockDatabase : IDatabase {
         }
 
         public bool KeyDelete(RedisKey key, CommandFlags flags = CommandFlags.None) {
-            throw new NotImplementedException();
+            return Values.Remove(key);
         }
 
         public long KeyDelete(RedisKey[] keys, CommandFlags flags = CommandFlags.None) {
