@@ -64,7 +64,7 @@ public class StreamController : ControllerBase {
         await using var context = await _applicationDbContextFactory.CreateDbContextAsync();
         ApplicationUser? user = await context.Users.FirstOrDefaultAsync(user => user.Id == userId);
         if (user != null) {
-            var stream = await StreamHelper.GenerateStreamDetails(baseStreamUrl, user.UserName, streamKey);
+            var stream = StreamHelper.GenerateStreamDetails(baseStreamUrl, user.UserName, streamKey);
 
             user.StreamKey = stream.StreamKey;
             await context.SaveChangesAsync();
