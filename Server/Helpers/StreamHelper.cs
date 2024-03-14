@@ -40,7 +40,7 @@ public class StreamHelper {
         if (user == null) return null;
         Stream? newlyGeneratedStreamDetails = null;
         if (browserStreaming) {
-            Stream streamDetails = await GenerateStreamDetails(wssBaseStreamUrl.Replace("{User}", user.UserName), user.UserName, streamKey, "direction=send&transport=tcp");
+            Stream streamDetails = GenerateStreamDetails(wssBaseStreamUrl.Replace("{User}", user.UserName), user.UserName, streamKey, "direction=send&transport=tcp");
             return new Shared.Stream {
                 StreamServer = $"{wssBaseStreamUrl.Replace("{User}", String.Empty)}{streamDetails.StreamKey}&direction=send&transport=tcp",
                 StreamKey = user?.StreamKey,
@@ -48,12 +48,12 @@ public class StreamHelper {
             };
         }
 
-        var generatedStreamDetails = await GenerateStreamDetails(baseStreamUrl, user.UserName, streamKey);
+        var generatedStreamDetails = GenerateStreamDetails(baseStreamUrl, user.UserName, streamKey);
         generatedStreamDetails.PlayUrl = playUrl;
         return generatedStreamDetails;
     }
 
-    public static async Task<Stream> GenerateStreamDetails(string baseStreamUrl, string username, string key, string? additionalParameters = null) {
+    public static Stream GenerateStreamDetails(string baseStreamUrl, string username, string key, string? additionalParameters = null) {
         string encodedPolicy = GetEncodedPolicy();
         string hashedStringUrl = baseStreamUrl.Replace("{User}", username);
         string toBeHashedUrl = $"{hashedStringUrl}?policy={encodedPolicy}{(additionalParameters != null ? $"&{additionalParameters}" : String.Empty)}";
