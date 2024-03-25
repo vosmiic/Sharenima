@@ -11,7 +11,7 @@ public class FfmpegCore {
     private static async Task<(string result, bool success, string errorReason)> FfprobeCommand(string argument, string? input = null, FfmpegFormat? inputFormat = null) {
         string errorResult = String.Empty;
 
-        Process proc = await RunConsoleCommand($"{(input != null ? $"{input} | " : String.Empty)}ffprobe {argument} -f ");
+        Process proc = await RunConsoleCommand($"{(input != null ? $"{input} | " : String.Empty)}ffprobe {argument}");
         string result = await proc.StandardOutput.ReadToEndAsync();
         errorResult += await proc.StandardError.ReadToEndAsync();
 
