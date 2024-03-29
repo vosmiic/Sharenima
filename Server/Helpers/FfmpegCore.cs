@@ -1,10 +1,11 @@
 using System.Diagnostics;
 
-namespace Sharenima.Server.Helpers; 
+namespace Sharenima.Server.Helpers;
 
 public class FfmpegCore {
-        public static async Task<(string result, bool success, string errorReason)> RunFfprobeCommand(string argument) =>
+    public static async Task<(string result, bool success, string errorReason)> RunFfprobeCommand(string argument) =>
         await FfprobeCommand(argument);
+
     public static async Task<(string result, bool success, string errorReason)> RunFfprobeCommand(string argument, string input, FfmpegFormat inputFormat) =>
         await FfprobeCommand(argument, input: input, inputFormat: inputFormat);
 
@@ -20,7 +21,15 @@ public class FfmpegCore {
         return (result, errorResult != String.Empty, errorResult);
     }
 
-    public static async Task<(Stream stream, bool success, string errorReason)> RunFfmpegCommand(string argument, FfmpegFormat ffmpegFormat, string? input = null) {
+    public static async Task<(Stream stream, bool success, string errorReason)> RunFfmpegCommand(string argument) =>
+        await FfmpegCommand(argument);
+    
+    public static async Task<(Stream stream, bool success, string errorReason)> RunFfmpegCommand(string argument, FfmpegFormat ffmpegFormat) =>
+        await FfmpegCommand(argument, null, ffmpegFormat);
+    public static async Task<(Stream stream, bool success, string errorReason)> RunFfmpegCommand(string argument, string input, FfmpegFormat ffmpegFormat) =>
+        await FfmpegCommand(argument, input, ffmpegFormat);
+    
+    private static async Task<(Stream stream, bool success, string errorReason)> FfmpegCommand(string argument, string? input = null, FfmpegFormat? ffmpegFormat = null) {
         string errorResult = String.Empty;
 
         Process proc = await RunConsoleCommand($"{(input != null ? $"\"{input}\" | " : String.Empty)}ffmpeg {argument} -f {ffmpegFormat.ToString().ToLower()} pipe:");
