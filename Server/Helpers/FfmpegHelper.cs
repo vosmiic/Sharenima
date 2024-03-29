@@ -14,6 +14,18 @@ public class FfmpegHelper {
     public static void GetMetadata(MemoryStream memoryStream) {
         
     }
+
+    /// <summary>
+    /// Create subtitles from a media file.
+    /// </summary>
+    /// <param name="inputFileLocation">The file location of the media file to extract the subtitles of.</param>
+    /// <param name="outputFileLocation">The file location to save the subtitles file to.</param>
+    /// <param name="subtitleStreamToExtract">Optional stream to extract. Will only extract this single stream.</param>
+    /// <returns></returns>
+    public static async Task<bool> CreateSubtitles(string inputFileLocation, string outputFileLocation, int? subtitleStreamToExtract = null) {
+        (Stream stream, bool success, string errorReason) response = await FfmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{(subtitleStreamToExtract != null ? subtitleStreamToExtract : "s")} -map 0:t? \"{outputFileLocation}\"");
+        return response.success || !File.Exists(outputFileLocation);
+    }
     
     
 }
