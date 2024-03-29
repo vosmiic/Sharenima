@@ -26,6 +26,17 @@ public class FfmpegHelper {
         (Stream stream, bool success, string errorReason) response = await FfmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{(subtitleStreamToExtract != null ? subtitleStreamToExtract : "s")} -map 0:t? \"{outputFileLocation}\"");
         return response.success || !File.Exists(outputFileLocation);
     }
-    
-    
+
+    /// <summary>
+    /// Burn subtitles into video.
+    /// </summary>
+    /// <param name="inputVideoFileLocation">The file location of the media file to burn the subtitles into.</param>
+    /// <param name="inputSubtitlesFileLocation">The file location of the subtitles file to burn into the video file.</param>
+    /// <param name="outputFileLocation">The file location to save the video file with burnt in subtitles.</param>
+    /// <param name="subtitleStreamToBurn">Optional subtitle stream to burn. Defaults to 0.</param>
+    /// <returns>True if successfully created the video file with burnt in subtitles.</returns>
+    public static async Task<bool> BurnSubtitles(string inputVideoFileLocation, string inputSubtitlesFileLocation, string outputFileLocation, int subtitleStreamToBurn = 0) {
+        (Stream stream, bool success, string errorReason) response = await FfmpegCore.RunFfmpegCommand($"-i \"{inputVideoFileLocation}\" -map 0:v -map 0:a -c:v libsvtav1 -crf 35 -b:v 0 -sn -vf \"subtitles='{inputSubtitlesFileLocation}':stream_index={subtitleStreamToBurn}\" \"{outputFileLocation}\"");
+        return response.success || !File.Exists(outputFileLocation);
+    }
 }
