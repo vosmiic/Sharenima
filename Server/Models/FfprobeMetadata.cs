@@ -78,7 +78,9 @@ public class FfprobeMetadata {
 
         [JsonPropertyName("profile")] public string Profile { get; set; }
 
-        [JsonPropertyName("codec_type")] public CodecType CodecType { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [JsonPropertyName("codec_type")]
+        public CodecType CodecType { get; set; }
 
         [JsonPropertyName("codec_tag_string")] public string CodecTagString { get; set; }
 
