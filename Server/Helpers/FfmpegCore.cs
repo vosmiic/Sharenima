@@ -18,7 +18,7 @@ public class FfmpegCore {
 
         await proc.WaitForExitAsync();
 
-        return (result, errorResult != String.Empty, errorResult);
+        return (result, errorResult == String.Empty, errorResult);
     }
 
     public static async Task<(Stream stream, bool success, string errorReason)> RunFfmpegCommand(string argument) =>
