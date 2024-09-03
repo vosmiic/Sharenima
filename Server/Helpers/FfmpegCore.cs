@@ -32,7 +32,7 @@ public class FfmpegCore {
     private static async Task<(Stream stream, bool success, string errorReason)> FfmpegCommand(string argument, string? input = null, FfmpegFormat? ffmpegFormat = null) {
         string errorResult = String.Empty;
 
-        Process proc = await RunConsoleCommand($"{(input != null ? $"\"{input}\" | " : String.Empty)}ffmpeg {argument} -f {ffmpegFormat.ToString().ToLower()} pipe:");
+        Process proc = await RunConsoleCommand($"{(input != null ? $"\"{input}\" | " : String.Empty)}ffmpeg -y {argument} -f {ffmpegFormat.ToString().ToLower()} pipe:");
         var memoryStream = proc.StandardOutput.BaseStream;
         errorResult += await proc.StandardError.ReadToEndAsync();
 
