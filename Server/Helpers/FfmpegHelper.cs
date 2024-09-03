@@ -22,8 +22,20 @@ public class FfmpegHelper {
     /// <param name="outputFileLocation">The file location to save the subtitles file to.</param>
     /// <param name="subtitleStreamToExtract">Optional stream to extract. Will only extract this single stream.</param>
     /// <returns>True if successfully created the subtitles file.</returns>
-    public static async Task<bool> CreateSubtitles(string inputFileLocation, string outputFileLocation, int? subtitleStreamToExtract = null) {
+    public static async Task<bool> ExtractSubtitles(string inputFileLocation, string outputFileLocation, int? subtitleStreamToExtract = null) {
         (Stream stream, bool success, string errorReason) response = await FfmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{(subtitleStreamToExtract != null ? subtitleStreamToExtract : "s")} -map 0:t? \"{outputFileLocation}\"");
+        return response.success || !File.Exists(outputFileLocation);
+    }
+
+    /// <summary>
+    /// Extract a single subtitle stream from a media file.
+    /// </summary>
+    /// <param name="inputFileLocation">The file location of the media file to extract the subtitle of.</param>
+    /// <param name="outputFileLocation">The file location to save the subtitle file to.</param>
+    /// <param name="subtitleStreamToExtract">The subtitle stream to extract.</param>
+    /// <returns>True if successfully created the subtitle file.</returns>
+    public static async Task<bool> ExtractSubtitle(string inputFileLocation, string outputFileLocation, int subtitleStreamToExtract) {
+        (Stream stream, bool success, string errorReason) response = await FfmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{subtitleStreamToExtract} -codec:s srt \"{outputFileLocation}\"");
         return response.success || !File.Exists(outputFileLocation);
     }
 
