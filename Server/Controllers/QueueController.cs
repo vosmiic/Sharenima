@@ -15,7 +15,6 @@ using Sharenima.Server.SignalR;
 using Sharenima.Shared;
 using Sharenima.Shared.Queue;
 using StackExchange.Redis;
-using Xabe.FFmpeg;
 using File = Sharenima.Shared.File;
 using Instance = Sharenima.Shared.Instance;
 using Queue = Sharenima.Shared.Queue.Queue;
@@ -80,7 +79,7 @@ public class QueueController : ControllerBase {
     [RequestFormLimits(MultipartBodyLengthLimit = Int64.MaxValue)]
     [RequestSizeLimit(Int64.MaxValue)]
     [Route("fileUpload")]
-    public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, string connectionId) {
+    public async Task<ActionResult> UploadVideoToInstance(Guid instanceId, string connectionId, bool burnSubtitle, int chosenSubtitleStream) {
         List<string> partialErrors = new List<string>();
         IFormFile? fileData = Request.Form.Files[0];
         if (fileData == null) return NoContent();
@@ -118,51 +117,44 @@ public class QueueController : ControllerBase {
         await fileData.CopyToAsync(fs);
         _logger.LogInformation("Created temporary video upload file");
         FileHelper fileHelper = new FileHelper();
-        var mediaInfo = await FfmpegHelper.GetFileMetadata(mediaDownloadLocation);
-        List<QueueSubtitles> queueSubtitles = new List<QueueSubtitles>();
-        if (Request.Form.TryGetValue(nameof(UploadAdvancedSettings.KeepSubtitles), out StringValues stringValues) &&
-            Boolean.TryParse(stringValues.First(), out bool keepSubtitles) &&
-            keepSubtitles) {
-            foreach (ISubtitleStream mediaInfoSubtitleStream in mediaInfo.SubtitleStreams) {
-                (string? outputPath, string? error) extraction = await FfmpegHelper.ExtractStreamToFile(_logger, mediaInfoSubtitleStream, Path.Combine(downloadDirectory.FullName, $"subtitles/{queue.Id}/", $"{mediaInfoSubtitleStream.Title}{(string.IsNullOrEmpty(mediaInfoSubtitleStream.Language) ? String.Empty : $" - {mediaInfoSubtitleStream.Language}")}.srt"));
-                if (extraction.error != null && !partialErrors.Contains(extraction.error))
-                    partialErrors.Add(extraction.error);
-
-                if (extraction.outputPath != null) {
-                    queueSubtitles.Add(new QueueSubtitles {
-                        FileLocation = Path.Combine(hostedLocation, "subtitles", queue.Id.ToString(), Path.GetFileName(extraction.outputPath)),
-                        QueueId = queue.Id,
-                        Label = $"{mediaInfoSubtitleStream.Title}{(string.IsNullOrEmpty(mediaInfoSubtitleStream.Language) ? String.Empty : $" - {mediaInfoSubtitleStream.Language}")}"
-                    });
-                }
-            }
+        var mediaInfo = await FfmpegHelper.GetMetadata(mediaDownloadLocation);
+        if (mediaInfo == null) {
+            return BadRequest("Could not get metadata from file");
         }
 
-        if (mediaInfo.AudioStreams.FirstOrDefault()?.Bitrate == null &&
-            mediaInfo.VideoStreams.FirstOrDefault()?.Bitrate == null)
-            return BadRequest("Invalid file type");
-        FileHelper.SupportedContainer? container = fileHelper.GetMediaContainer(mediaDownloadLocation);
-        IVideoStream? firstVideoStream = mediaInfo.VideoStreams.FirstOrDefault();
-        IAudioStream? firstAudioStream = mediaInfo.AudioStreams.FirstOrDefault();
-        if (container == null ||
-            (firstVideoStream != null && Enum.TryParse<VideoCodec>(firstVideoStream?.Codec, false, out VideoCodec videoCodec) &&
-             !FileHelper.CheckSupportedFile(container.Value, videoCodec: videoCodec)) ||
-            (firstAudioStream != null && Enum.TryParse<AudioCodec>(firstAudioStream?.Codec, false, out AudioCodec audioCodec) &&
-             !FileHelper.CheckSupportedFile(container.Value, audioCodec: audioCodec))) {
-            //todo need to check settings to know what format to convert to
-            _logger.LogInformation("Uploaded file incorrect format; converting to valid web format");
-            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Upload", "File requires converting, this may take some time...", MatToastType.Warning);
-            ConvertUploadedFile(firstVideoStream != null, mediaDownloadLocation, downloadDirectory, queue, hostedLocation, fileHelper, instanceId, connectionId, queueSubtitles);
-
-            return Ok();
+        string finalMediaLocation;
+        List<QueueSubtitles> subtitles = new List<QueueSubtitles>();
+        
+        if (burnSubtitle) {
+            string subtitlesFileLocation = $"{FileHelper.TemporaryFile}.mkv";
+            var subtitlesExtracted = await FfmpegHelper.ExtractSubtitles(mediaDownloadLocation, subtitlesFileLocation, chosenSubtitleStream);
+            if (!subtitlesExtracted) return BadRequest("Could not extract subtitles from the file");
+            finalMediaLocation = Path.Combine(downloadDirectory.FullName, instanceId.ToString(), $"{queue.Id}.mp4");
+            var createdVideoFileWithBurntInSubtitles = await FfmpegHelper.BurnSubtitles(mediaDownloadLocation, subtitlesFileLocation, finalMediaLocation);
+            if (!createdVideoFileWithBurntInSubtitles) return BadRequest("Could not burn subtitles into video file");
+        } else {
+            subtitles = new List<QueueSubtitles>();
+            DirectoryInfo mediaDirectory = Directory.CreateDirectory(Path.Combine(downloadDirectory.FullName, instanceId.ToString()));
+            foreach (FfprobeMetadata.Stream subtitleStream in mediaInfo.Streams.Where(stream => stream.CodecType == FfprobeMetadata.CodecType.Subtitle)) {
+                string subtitleSaveLocation = Path.Combine(mediaDirectory.FullName, $"{FileHelper.RemoveIllegalFileNameCharactersFromString(subtitleStream.Tags.Title)}.srt");
+                bool extractedSubtitle = await FfmpegHelper.ExtractSubtitle(mediaDownloadLocation, subtitleSaveLocation, subtitleStream.Index);
+                if (extractedSubtitle) {
+                    subtitles.Add(new QueueSubtitles {
+                        QueueId = queue.Id,
+                        Label = subtitleStream.Tags.Title,
+                        FileLocation = Path.Combine("/files", instance.Name, mediaDirectory.Name, $"{FileHelper.RemoveIllegalFileNameCharactersFromString(subtitleStream.Tags.Title)}.srt")
+                    });
+                } else {
+                    _logger.LogWarning($"Could not extract subtitle {subtitleStream.Tags.Title} on queue {queue.Id}.");
+                }
+            }
         }
 
         string newFileName = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
         System.IO.File.Move(mediaDownloadLocation, newFileName);
         mediaDownloadLocation = newFileName;
-
-
-        await AddUploadedVideoToDb(queue, hostedLocation, extension, fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, firstVideoStream != null, queueSubtitles);
+        
+        await AddUploadedVideoToDb(queue, hostedLocation, extension, fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, mediaInfo.Streams.Any(stream => stream.CodecType == FfprobeMetadata.CodecType.Video), subtitles);
         await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
 
         return Ok();
