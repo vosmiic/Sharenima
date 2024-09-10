@@ -1,65 +1,90 @@
-using System.Diagnostics;
+using System.Text;
+using CliWrap;
+using CliWrap.Exceptions;
 
 namespace Sharenima.Server.Helpers;
 
-public class FfmpegCore {
-    public static async Task<(string result, bool success, string errorReason)> RunFfprobeCommand(string argument) =>
+public class FfmpegCore : IFfmpegCore {
+    public ILogger Logger { get; set; }
+    
+    public FfmpegCore(ILogger logger) {
+        Logger = logger;
+    }
+    
+    /// <inheritdoc />
+    public async Task<string?> RunFfprobeCommand(string argument) =>
         await FfprobeCommand(argument);
 
-    public static async Task<(string result, bool success, string errorReason)> RunFfprobeCommand(string argument, string input, FfmpegFormat inputFormat) =>
+    /// <inheritdoc />
+    public async Task<string?> RunFfprobeCommand(string argument, string input, FfmpegFormat inputFormat) =>
         await FfprobeCommand(argument, input: input, inputFormat: inputFormat);
-
-    private static async Task<(string result, bool success, string errorReason)> FfprobeCommand(string argument, string? input = null, FfmpegFormat? inputFormat = null) {
-        string errorResult = String.Empty;
-
-        Process proc = await RunConsoleCommand($"{(input != null ? $"{input} | " : String.Empty)}ffprobe {argument}");
-        string result = await proc.StandardOutput.ReadToEndAsync();
-        errorResult += await proc.StandardError.ReadToEndAsync();
-
-        await proc.WaitForExitAsync();
-
-        return (result, errorResult == String.Empty, errorResult);
+    
+    private async Task<string?> FfprobeCommand(string argument, string? input = null, FfmpegFormat? inputFormat = null) {
+        MemoryStream? result = await RunConsoleCommand("ffprobe", new List<string> { argument }, input, inputFormat);
+        if (result == null) return null;
+        using var streamReader = new StreamReader(result);
+        streamReader.BaseStream.Seek(0, SeekOrigin.Begin);
+        string stringResult = await streamReader.ReadToEndAsync();
+        return stringResult;
     }
 
-    public static async Task<(Stream stream, bool success, string errorReason)> RunFfmpegCommand(string argument) =>
+    /// <inheritdoc />
+    public async Task<MemoryStream?> RunFfmpegCommand(string argument) =>
         await FfmpegCommand(argument);
     
-    public static async Task<(Stream stream, bool success, string errorReason)> RunFfmpegCommand(string argument, FfmpegFormat ffmpegFormat) =>
-        await FfmpegCommand(argument, null, ffmpegFormat);
-    public static async Task<(Stream stream, bool success, string errorReason)> RunFfmpegCommand(string argument, string input, FfmpegFormat ffmpegFormat) =>
-        await FfmpegCommand(argument, input, ffmpegFormat);
+    /// <inheritdoc />
+    public async Task<MemoryStream?> RunFfmpegCommand(string argument, FfmpegFormat ffmpegFormat, string? output = null) =>
+        await FfmpegCommand(argument, null, ffmpegFormat, output);
     
-    private static async Task<(Stream stream, bool success, string errorReason)> FfmpegCommand(string argument, string? input = null, FfmpegFormat? ffmpegFormat = null) {
-        string errorResult = String.Empty;
+    /// <inheritdoc />
+    public async Task<MemoryStream?> RunFfmpegCommand(string argument, string input, FfmpegFormat ffmpegFormat, string? output = null) =>
+        await FfmpegCommand(argument, input, ffmpegFormat, output);
 
-        Process proc = await RunConsoleCommand($"{(input != null ? $"\"{input}\" | " : String.Empty)}ffmpeg -y {argument} -f {ffmpegFormat.ToString().ToLower()} pipe:");
-        var memoryStream = proc.StandardOutput.BaseStream;
-        errorResult += await proc.StandardError.ReadToEndAsync();
+    private async Task<MemoryStream?> FfmpegCommand(string argument, string? input = null, FfmpegFormat? ffmpegFormat = null, string? output = null) =>
+        await RunConsoleCommand("ffmpeg",
+            new List<string> {
+                "-y",
+                argument
+            },
+            input,
+            ffmpegFormat,
+            output);
 
-        await proc.WaitForExitAsync();
+    private async Task<MemoryStream?> RunConsoleCommand(string commandTarget, List<string> arguments, string? input = null, FfmpegFormat? ffmpegFormat = null, string? output = null) {
+        StringBuilder errorResult = new StringBuilder();
 
-        return (memoryStream, errorResult != String.Empty, errorResult);
-    }
-
-    private static async Task<Process> RunConsoleCommand(string argument) {
-        Process proc = new Process();
-        if (OperatingSystem.IsWindows()) {
-            proc.StartInfo.FileName = "cmd.exe";
-            proc.StartInfo.Arguments = argument;
-        } else {
-            proc.StartInfo.FileName = "/bin/bash";
-            proc.StartInfo.Arguments = $"-c \" {argument}\"";
+        var command = Cli.Wrap(commandTarget)
+            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(errorResult));
+        if (input != null) {
+            command = command.WithStandardInputPipe(PipeSource.FromString(input));
         }
 
-        proc.StartInfo.UseShellExecute = false;
-        proc.StartInfo.RedirectStandardOutput = true;
-        proc.StartInfo.RedirectStandardError = true;
-        proc.Start();
+        List<string> commandArguments = new List<string>();
+        commandArguments.AddRange(arguments);
 
-        return proc;
+        if (ffmpegFormat != null) {
+            commandArguments.Add($"-f {ffmpegFormat.Value.ToString().ToLower()}");
+        }
+
+        if (output != null) {
+            commandArguments.Add(output == "pipe:" ? output : $"-o {output}");
+        }
+
+        MemoryStream memoryStream = new MemoryStream();
+        command = command.WithArguments(commandArguments, false) | PipeTarget.ToStream(memoryStream);
+
+        try {
+            await command.ExecuteAsync();
+        } catch (CommandExecutionException e) {
+            Logger.LogError($"{commandTarget} command failed; reason: \n {e.Message} \n Command output: \n {errorResult}");
+            throw;
+        }
+
+        return memoryStream;
     }
 
     public enum FfmpegFormat {
-        Webm
+        Webm,
+        Image2Pipe
     }
 }
