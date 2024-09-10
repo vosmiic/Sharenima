@@ -4,10 +4,16 @@ using Sharenima.Server.Models;
 namespace Sharenima.Server.Helpers;
 
 public class FfmpegHelper {
-    public static async Task<FfprobeMetadata.Metadata?> GetMetadata(string fileLocation) {
-        (string result, bool success, string errorReason) response = await FfmpegCore.RunFfprobeCommand($"-v quiet -print_format json -show_format -show_streams \"{fileLocation}\"");
-        if (!response.success) return null;
-        FfprobeMetadata.Metadata? metadata = JsonSerializer.Deserialize<FfprobeMetadata.Metadata>(response.result);
+    private readonly IFfmpegCore _ffmpegCore;
+
+    public FfmpegHelper(IFfmpegCore ffmpegCore) {
+        _ffmpegCore = ffmpegCore;
+    }
+
+    public async Task<FfprobeMetadata.Metadata?> GetMetadata(string fileLocation) {
+        string? response = await _ffmpegCore.RunFfprobeCommand($"-v quiet -print_format json -show_format -show_streams \"{fileLocation}\"");
+        if (response == null) return null;
+        FfprobeMetadata.Metadata? metadata = JsonSerializer.Deserialize<FfprobeMetadata.Metadata>(response);
         return metadata;
     }
 
@@ -22,9 +28,9 @@ public class FfmpegHelper {
     /// <param name="outputFileLocation">The file location to save the subtitles file to.</param>
     /// <param name="subtitleStreamToExtract">Optional stream to extract. Will only extract this single stream.</param>
     /// <returns>True if successfully created the subtitles file.</returns>
-    public static async Task<bool> ExtractSubtitles(string inputFileLocation, string outputFileLocation, int? subtitleStreamToExtract = null) {
-        (Stream stream, bool success, string errorReason) response = await FfmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{(subtitleStreamToExtract != null ? subtitleStreamToExtract : "s")} -map 0:t? \"{outputFileLocation}\"");
-        return response.success || !File.Exists(outputFileLocation);
+    public async Task<bool> ExtractSubtitles(string inputFileLocation, string outputFileLocation, int? subtitleStreamToExtract = null) {
+        MemoryStream? response = await _ffmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{(subtitleStreamToExtract != null ? subtitleStreamToExtract : "s")} -map 0:t? \"{outputFileLocation}\"");
+        return response == null || !File.Exists(outputFileLocation);
     }
 
     /// <summary>
@@ -34,9 +40,9 @@ public class FfmpegHelper {
     /// <param name="outputFileLocation">The file location to save the subtitle file to.</param>
     /// <param name="subtitleStreamToExtract">The subtitle stream to extract.</param>
     /// <returns>True if successfully created the subtitle file.</returns>
-    public static async Task<bool> ExtractSubtitle(string inputFileLocation, string outputFileLocation, int subtitleStreamToExtract) {
-        (Stream stream, bool success, string errorReason) response = await FfmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{subtitleStreamToExtract} -codec:s srt \"{outputFileLocation}\"");
-        return response.success || !File.Exists(outputFileLocation);
+    public async Task<bool> ExtractSubtitle(string inputFileLocation, string outputFileLocation, int subtitleStreamToExtract) {
+        MemoryStream? response = await _ffmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{subtitleStreamToExtract} -codec:s srt \"{outputFileLocation}\"");
+        return response == null || !File.Exists(outputFileLocation);
     }
 
     /// <summary>
@@ -47,8 +53,8 @@ public class FfmpegHelper {
     /// <param name="outputFileLocation">The file location to save the video file with burnt in subtitles.</param>
     /// <param name="subtitleStreamToBurn">Optional subtitle stream to burn. Defaults to 0.</param>
     /// <returns>True if successfully created the video file with burnt in subtitles.</returns>
-    public static async Task<bool> BurnSubtitles(string inputVideoFileLocation, string inputSubtitlesFileLocation, string outputFileLocation, int subtitleStreamToBurn = 0) {
-        (Stream stream, bool success, string errorReason) response = await FfmpegCore.RunFfmpegCommand($"-i \"{inputVideoFileLocation}\" -map 0:v -map 0:a -c:v libsvtav1 -crf 35 -b:v 0 -sn -vf \"subtitles='{inputSubtitlesFileLocation}':stream_index={subtitleStreamToBurn}\" \"{outputFileLocation}\"");
-        return response.success || !File.Exists(outputFileLocation);
+    public async Task<bool> BurnSubtitles(string inputVideoFileLocation, string inputSubtitlesFileLocation, string outputFileLocation, int subtitleStreamToBurn = 0) {
+        MemoryStream? response = await _ffmpegCore.RunFfmpegCommand($"-i \"{inputVideoFileLocation}\" -map 0:v -map 0:a -c:v libsvtav1 -crf 35 -b:v 0 -sn -vf \"subtitles='{inputSubtitlesFileLocation}':stream_index={subtitleStreamToBurn}\" \"{outputFileLocation}\"");
+        return response == null || !File.Exists(outputFileLocation);
     }
 }
