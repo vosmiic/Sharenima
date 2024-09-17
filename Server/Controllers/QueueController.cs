@@ -117,7 +117,9 @@ public class QueueController : ControllerBase {
         await fileData.CopyToAsync(fs);
         _logger.LogInformation("Created temporary video upload file");
         FileHelper fileHelper = new FileHelper();
-        var mediaInfo = await FfmpegHelper.GetMetadata(mediaDownloadLocation);
+        FfmpegCore ffmpegCore = new FfmpegCore(_logger);
+        FfmpegHelper ffmpegHelper = new FfmpegHelper(ffmpegCore);
+        var mediaInfo = await ffmpegHelper.GetMetadata(mediaDownloadLocation);
         if (mediaInfo == null) {
             return BadRequest("Could not get metadata from file");
         }
@@ -127,17 +129,17 @@ public class QueueController : ControllerBase {
         
         if (burnSubtitle) {
             string subtitlesFileLocation = $"{FileHelper.TemporaryFile}.mkv";
-            var subtitlesExtracted = await FfmpegHelper.ExtractSubtitles(mediaDownloadLocation, subtitlesFileLocation, chosenSubtitleStream);
+            var subtitlesExtracted = await ffmpegHelper.ExtractSubtitles(mediaDownloadLocation, subtitlesFileLocation, chosenSubtitleStream);
             if (!subtitlesExtracted) return BadRequest("Could not extract subtitles from the file");
             finalMediaLocation = Path.Combine(downloadDirectory.FullName, instanceId.ToString(), $"{queue.Id}.mp4");
-            var createdVideoFileWithBurntInSubtitles = await FfmpegHelper.BurnSubtitles(mediaDownloadLocation, subtitlesFileLocation, finalMediaLocation);
+            var createdVideoFileWithBurntInSubtitles = await ffmpegHelper.BurnSubtitles(mediaDownloadLocation, subtitlesFileLocation, finalMediaLocation);
             if (!createdVideoFileWithBurntInSubtitles) return BadRequest("Could not burn subtitles into video file");
         } else {
             subtitles = new List<QueueSubtitles>();
             DirectoryInfo mediaDirectory = Directory.CreateDirectory(Path.Combine(downloadDirectory.FullName, instanceId.ToString()));
             foreach (FfprobeMetadata.Stream subtitleStream in mediaInfo.Streams.Where(stream => stream.CodecType == FfprobeMetadata.CodecType.Subtitle)) {
                 string subtitleSaveLocation = Path.Combine(mediaDirectory.FullName, $"{FileHelper.RemoveIllegalFileNameCharactersFromString(subtitleStream.Tags.Title)}.srt");
-                bool extractedSubtitle = await FfmpegHelper.ExtractSubtitle(mediaDownloadLocation, subtitleSaveLocation, subtitleStream.Index);
+                bool extractedSubtitle = await ffmpegHelper.ExtractSubtitle(mediaDownloadLocation, subtitleSaveLocation, subtitleStream.Index);
                 if (extractedSubtitle) {
                     subtitles.Add(new QueueSubtitles {
                         QueueId = queue.Id,
@@ -154,7 +156,7 @@ public class QueueController : ControllerBase {
         System.IO.File.Move(mediaDownloadLocation, newFileName);
         mediaDownloadLocation = newFileName;
         
-        await AddUploadedVideoToDb(queue, hostedLocation, extension, fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, mediaInfo.Streams.Any(stream => stream.CodecType == FfprobeMetadata.CodecType.Video), subtitles);
+        await AddUploadedVideoToDb(ffmpegCore, ffmpegHelper, queue, hostedLocation, extension, fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, mediaInfo.Streams.Any(stream => stream.CodecType == FfprobeMetadata.CodecType.Video), subtitles);
         await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
 
         return Ok();
@@ -296,11 +298,18 @@ public class QueueController : ControllerBase {
         }
     }
 
-    private async Task AddUploadedVideoToDb(Queue queue, string hostedLocation, string extension, FileHelper fileHelper, string videoDownloadLocation, DirectoryInfo downloadDirectory, GeneralDbContext context, Guid instanceId, bool forVideo, List<QueueSubtitles> queueSubtitles) {
+    private async Task AddUploadedVideoToDb(IFfmpegCore ffmpegCore, FfmpegHelper ffmpegHelper, Queue queue, string hostedLocation, string extension, FileHelper fileHelper, string videoDownloadLocation, DirectoryInfo downloadDirectory, GeneralDbContext context, Guid instanceId, bool forVideo, List<QueueSubtitles> queueSubtitles) {
         queue.Url = Path.Combine(hostedLocation, $"{queue.Id.ToString()}{extension}");
+        FileHelper.ImageOutputFormat imageOutputFormat = FileHelper.ImageOutputFormat.Png;
+        var fileName = $"{queue.Id.ToString()}.{imageOutputFormat.ToString().ToLower()}";
         if (forVideo) {
-            string? thumbnailFileName = await fileHelper.GetVideoThumbnail(videoDownloadLocation, downloadDirectory.FullName, queue.Id.ToString());
-            queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, thumbnailFileName) : null;
+            MemoryStream? thumbnailFileName = await fileHelper.GetVideoThumbnailStream(ffmpegCore, ffmpegHelper, videoDownloadLocation, imageOutputFormat);
+            if (thumbnailFileName != null) {
+                var thumbnailFileStream = System.IO.File.Open(Path.Combine(downloadDirectory.FullName, fileName), FileMode.Create);
+                thumbnailFileName.WriteTo(thumbnailFileStream);
+                thumbnailFileStream.Close();
+            }
+            queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, fileName) : null;
         }
 
         context.Queues.Add(queue);
