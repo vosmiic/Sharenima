@@ -1,12 +1,11 @@
-using Xabe.FFmpeg;
-using Xabe.FFmpeg.Downloader;
+using FFMpegCore.Enums;
+using Sharenima.Server.Models;
 
 namespace Sharenima.Server.Helpers; 
 
 public class FileHelper {
     public FileHelper() {
-        if (FfmpegHelper.IsFfmpegInstalled("ffmpeg -version").Result && FfmpegHelper.IsFfmpegInstalled("ffprobe -version").Result)
-            FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official).Wait();
+        //todo need to confirm ffmpeg and ffprobe are installed
     }
     public async Task<MemoryStream?> GetVideoThumbnailStream(IFfmpegCore ffmpegCore, FfmpegHelper ffmpegHelper, string filePath, ImageOutputFormat imageFormat) {
         var metadata = await ffmpegHelper.GetMetadata(filePath);
@@ -23,9 +22,9 @@ public class FileHelper {
     /// </summary>
     /// <param name="mediaFilePath">Path to the video.</param>
     /// <returns>Container and codec of the video.</returns>
-    public SupportedContainer? GetMediaContainer(string mediaFilePath) {
+    public Container? GetMediaContainer(string mediaFilePath) {
         int fileTypeIndex = mediaFilePath.LastIndexOf(".", StringComparison.CurrentCulture);
-        if (fileTypeIndex != -1 && Enum.TryParse<SupportedContainer>(mediaFilePath.Substring(fileTypeIndex + 1), true, out SupportedContainer container)) {
+        if (fileTypeIndex != -1 && Enum.TryParse<Container>(mediaFilePath.Substring(fileTypeIndex + 1), true, out Container container)) {
             return container;
         }
 
@@ -50,50 +49,86 @@ public class FileHelper {
         }
     }
 
-    public static bool CheckSupportedFile(SupportedContainer container, VideoCodec? videoCodec = null, AudioCodec? audioCodec = null) {
+    /// <summary>
+    /// Checks if the file can be played in a browser.
+    /// </summary>
+    /// <param name="container">The container for the file.</param>
+    /// <param name="videoCodec">The video codec of the file. Null if no video stream.</param>
+    /// <param name="audioCodec">The audio codec of the file. Null if no audio stream.</param>
+    /// <returns>True if the file is supported and can be played in a browser.</returns>
+    public static bool CheckSupportedFile(Container container, VideoCodecNames? videoCodec = null, AudioCodecNames? audioCodec = null) {
         switch (container) {
-            case SupportedContainer.Mp4:
+            case Container.Mp4:
                 if (videoCodec != null)
-                    return videoCodec is VideoCodec.av1 or VideoCodec.h264 or VideoCodec.vp8 or VideoCodec.vp9;
+                    return videoCodec is VideoCodecNames.Av1 or VideoCodecNames.H264 or VideoCodecNames.Vp8 or VideoCodecNames.Vp9;
                 if (audioCodec != null)
-                    return audioCodec is AudioCodec.aac or AudioCodec.alac or AudioCodec.flac or AudioCodec.mp3 or AudioCodec.opus;
+                    return audioCodec is AudioCodecNames.Aac or AudioCodecNames.Alac or AudioCodecNames.Flac or AudioCodecNames.Mp3 or AudioCodecNames.Opus;
                 break;
-            case SupportedContainer.Webm:
+            case Container.Webm:
                 if (videoCodec != null)
-                    return videoCodec is VideoCodec.av1 or VideoCodec.h264 or VideoCodec.vp8 or VideoCodec.vp9;
+                    return videoCodec is VideoCodecNames.Av1 or VideoCodecNames.H264 or VideoCodecNames.Vp8 or VideoCodecNames.Vp9;
                 if (audioCodec != null)
-                    return audioCodec is AudioCodec.opus or AudioCodec.vorbis;
+                    return audioCodec is AudioCodecNames.Opus or AudioCodecNames.Vorbis;
                 break;
-            case SupportedContainer.Ogg:
+            case Container.Ogg:
                 if (videoCodec != null)
                     return true;
                 if (audioCodec != null)
-                    return audioCodec is AudioCodec.flac or AudioCodec.opus or AudioCodec.vorbis;
+                    return audioCodec is AudioCodecNames.Flac or AudioCodecNames.Opus or AudioCodecNames.Vorbis;
                 break;
-            case SupportedContainer.Mp3:
+            case Container.Mp3:
                 if (videoCodec != null)
                     return false;
                 if (audioCodec != null)
-                    return audioCodec is AudioCodec.mp3;
+                    return audioCodec is AudioCodecNames.Mp3;
                 break;
-            case SupportedContainer.Flac:
+            case Container.Flac:
                 if (videoCodec != null)
                     return false;
                 if (audioCodec != null)
-                    return audioCodec is AudioCodec.flac;
+                    return audioCodec is AudioCodecNames.Flac;
                 break;
-            default:
+            case Container.Unknown:
                 return false;
         }
 
         return false;
     }
 
-    public enum SupportedContainer {
+    public static readonly string TemporaryFile = Path.Combine(Path.GetTempPath(), "sharenima", Path.GetRandomFileName());
+
+    public static string RemoveIllegalFileNameCharactersFromString(string input) =>
+        string.Join("_", input.Split(Path.GetInvalidFileNameChars()));
+    
+    public enum Container {
         Mp4,
         Webm,
         Ogg,
         Mp3,
-        Flac
+        Flac,
+        Unknown
+    }
+    
+    public enum VideoCodecNames {
+        Av1,
+        H264,
+        Vp8,
+        Vp9,
+        Unknown
+    }
+    
+    public enum AudioCodecNames {
+        Aac,
+        Alac,
+        Flac,
+        Mp3,
+        Opus,
+        Vorbis,
+        Unknown
+    }
+    
+    public enum ImageOutputFormat {
+        Jpg,
+        Png
     }
 }

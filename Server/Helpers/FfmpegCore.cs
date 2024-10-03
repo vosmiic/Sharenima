@@ -6,11 +6,11 @@ namespace Sharenima.Server.Helpers;
 
 public class FfmpegCore : IFfmpegCore {
     public ILogger Logger { get; set; }
-    
+
     public FfmpegCore(ILogger logger) {
         Logger = logger;
     }
-    
+
     /// <inheritdoc />
     public async Task<string?> RunFfprobeCommand(string argument) =>
         await FfprobeCommand(argument);
@@ -18,7 +18,7 @@ public class FfmpegCore : IFfmpegCore {
     /// <inheritdoc />
     public async Task<string?> RunFfprobeCommand(string argument, string input, FfmpegFormat inputFormat) =>
         await FfprobeCommand(argument, input: input, inputFormat: inputFormat);
-    
+
     private async Task<string?> FfprobeCommand(string argument, string? input = null, FfmpegFormat? inputFormat = null) {
         MemoryStream? result = await RunConsoleCommand("ffprobe", new List<string> { argument }, input, inputFormat);
         if (result == null) return null;
@@ -30,36 +30,48 @@ public class FfmpegCore : IFfmpegCore {
 
     /// <inheritdoc />
     public async Task<MemoryStream?> RunFfmpegCommand(string argument) =>
-        await FfmpegCommand(argument);
-    
+        await FfmpegCommand(new List<string> { argument });
+
     /// <inheritdoc />
     public async Task<MemoryStream?> RunFfmpegCommand(string argument, FfmpegFormat ffmpegFormat, string? output = null) =>
-        await FfmpegCommand(argument, null, ffmpegFormat, output);
-    
+        await FfmpegCommand(new List<string> { argument }, null, ffmpegFormat, output);
+
     /// <inheritdoc />
     public async Task<MemoryStream?> RunFfmpegCommand(string argument, string input, FfmpegFormat ffmpegFormat, string? output = null) =>
-        await FfmpegCommand(argument, input, ffmpegFormat, output);
+        await FfmpegCommand(new List<string> { argument }, input, ffmpegFormat, output);
 
-    private async Task<MemoryStream?> FfmpegCommand(string argument, string? input = null, FfmpegFormat? ffmpegFormat = null, string? output = null) =>
+    /// <inheritdoc />
+    public async Task<MemoryStream?> RunFfmpegCommand(List<string> argument, string input, FfmpegFormat ffmpegFormat, string? output = null) =>
+        await FfmpegCommand(argument, input, ffmpegFormat, output);
+    
+    /// <inheritdoc />
+    public async Task<MemoryStream?> RunFfmpegCommand(List<string> argument, FileInfo input, FfmpegFormat ffmpegFormat, string? output = null) =>
+        await FfmpegCommand(argument, input.FullName, ffmpegFormat, output, true);
+
+    private async Task<MemoryStream?> FfmpegCommand(List<string> argument, string? input = null, FfmpegFormat? ffmpegFormat = null, string? output = null, bool inputIsFile = false) =>
         await RunConsoleCommand("ffmpeg",
             new List<string> {
-                "-y",
-                argument
-            },
+                "-y"
+            }.Concat(argument),
             input,
             ffmpegFormat,
-            output);
+            output,
+            inputIsFile);
 
-    private async Task<MemoryStream?> RunConsoleCommand(string commandTarget, List<string> arguments, string? input = null, FfmpegFormat? ffmpegFormat = null, string? output = null) {
+    private async Task<MemoryStream?> RunConsoleCommand(string commandTarget, IEnumerable<string> arguments, string? input = null, FfmpegFormat? ffmpegFormat = null, string? output = null, bool inputIsFile = false) {
         StringBuilder errorResult = new StringBuilder();
 
         var command = Cli.Wrap(commandTarget)
             .WithStandardErrorPipe(PipeTarget.ToStringBuilder(errorResult));
-        if (input != null) {
-            command = command.WithStandardInputPipe(PipeSource.FromString(input));
-        }
 
         List<string> commandArguments = new List<string>();
+        if (input != null) {
+            if (inputIsFile) {
+                commandArguments.Add($"-i {input}");
+            } else {
+                command = command.WithStandardInputPipe(PipeSource.FromString(input));
+            }
+        }
         commandArguments.AddRange(arguments);
 
         if (ffmpegFormat != null) {
@@ -67,7 +79,7 @@ public class FfmpegCore : IFfmpegCore {
         }
 
         if (output != null) {
-            commandArguments.Add(output == "pipe:" ? output : $"-o {output}");
+            commandArguments.Add(output);
         }
 
         MemoryStream memoryStream = new MemoryStream();
@@ -77,7 +89,7 @@ public class FfmpegCore : IFfmpegCore {
             await command.ExecuteAsync();
         } catch (CommandExecutionException e) {
             Logger.LogError($"{commandTarget} command failed; reason: \n {e.Message} \n Command output: \n {errorResult}");
-            throw;
+            return null;
         }
 
         return memoryStream;
@@ -85,6 +97,7 @@ public class FfmpegCore : IFfmpegCore {
 
     public enum FfmpegFormat {
         Webm,
+        Mp4,
         Image2Pipe
     }
 }

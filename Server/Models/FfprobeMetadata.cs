@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Sharenima.Server.Helpers;
 
 namespace Sharenima.Server.Models;
 
@@ -42,6 +43,19 @@ public class FfprobeMetadata {
     public class Format {
         [JsonPropertyName("filename")] public string Filename { get; set; }
 
+        public virtual FileHelper.Container Container {
+            get {
+                var lastIndex = Filename.LastIndexOf('.');
+                if (lastIndex == -1) return FileHelper.Container.Unknown;
+                var containerString = Filename.Substring(lastIndex + 1, Filename.Length - lastIndex - 1);
+                if (Enum.TryParse(containerString, out FileHelper.Container parsedContainer)) {
+                    return parsedContainer;
+                } else {
+                    return FileHelper.Container.Unknown;
+                }
+            }
+        }
+
         [JsonPropertyName("nb_streams")] public int NbStreams { get; set; }
 
         [JsonPropertyName("nb_programs")] public int NbPrograms { get; set; }
@@ -73,6 +87,26 @@ public class FfprobeMetadata {
         [JsonPropertyName("index")] public int Index { get; set; }
 
         [JsonPropertyName("codec_name")] public string CodecName { get; set; }
+
+        public virtual FileHelper.VideoCodecNames VideoCodecName {
+            get {
+                if (Enum.TryParse(CodecName, out FileHelper.VideoCodecNames parsedCodecName)) {
+                    return parsedCodecName;
+                } else {
+                    return FileHelper.VideoCodecNames.Unknown;
+                }
+            }
+        }
+        
+        public virtual FileHelper.AudioCodecNames AudioCodecName {
+            get {
+                if (Enum.TryParse(CodecName, out FileHelper.AudioCodecNames parsedCodecName)) {
+                    return parsedCodecName;
+                } else {
+                    return FileHelper.AudioCodecNames.Unknown;
+                }
+            }
+        }
 
         [JsonPropertyName("codec_long_name")] public string CodecLongName { get; set; }
 
@@ -193,7 +227,7 @@ public class FfprobeMetadata {
 
         [JsonPropertyName("creation_time")] public DateTime CreationTime { get; set; }
     }
-    
+
     public enum CodecType {
         Video,
         Audio,

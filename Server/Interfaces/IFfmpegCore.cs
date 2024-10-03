@@ -42,4 +42,24 @@ public interface IFfmpegCore {
     /// <param name="output">Output location.</param>
     /// <returns>Generated stream.</returns>
     Task<MemoryStream?> RunFfmpegCommand(string argument, string input, FfmpegCore.FfmpegFormat ffmpegFormat, string? output = null);
+
+    /// <summary>
+    /// Run an FFmpeg command
+    /// </summary>
+    /// <param name="argument">Arguments to add to the command.</param>
+    /// <param name="input">Input string.</param>
+    /// <param name="ffmpegFormat">Output format.</param>
+    /// <param name="output">Output location.</param>
+    /// <returns>Generated stream.</returns>
+    Task<MemoryStream?> RunFfmpegCommand(List<string> argument, string input, FfmpegCore.FfmpegFormat ffmpegFormat, string? output = null);
+    
+    /// <summary>
+    /// Run an FFmpeg command
+    /// </summary>
+    /// <param name="argument">Arguments to add to the command.</param>
+    /// <param name="input">Input string.</param>
+    /// <param name="ffmpegFormat">Output format.</param>
+    /// <param name="output">Output location.</param>
+    /// <returns>Generated stream.</returns>
+    Task<MemoryStream?> RunFfmpegCommand(List<string> argument, FileInfo input, FfmpegCore.FfmpegFormat ffmpegFormat, string? output = null);
 }
