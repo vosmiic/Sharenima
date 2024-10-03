@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Primitives;
-using NuGet.Packaging;
 using Sharenima.Server.Data;
 using Sharenima.Server.Helpers;
 using Sharenima.Server.Models;
@@ -15,7 +13,6 @@ using Sharenima.Server.SignalR;
 using Sharenima.Shared;
 using Sharenima.Shared.Queue;
 using StackExchange.Redis;
-using File = Sharenima.Shared.File;
 using Instance = Sharenima.Shared.Instance;
 using Queue = Sharenima.Shared.Queue.Queue;
 
@@ -119,21 +116,19 @@ public class QueueController : ControllerBase {
         FileHelper fileHelper = new FileHelper();
         FfmpegCore ffmpegCore = new FfmpegCore(_logger);
         FfmpegHelper ffmpegHelper = new FfmpegHelper(ffmpegCore);
-        var mediaInfo = await ffmpegHelper.GetMetadata(mediaDownloadLocation);
+        FileTranscode fileTranscode = new FileTranscode(ffmpegCore, new FileInfo(mediaDownloadLocation));
+        FfprobeMetadata.Metadata? mediaInfo = await ffmpegHelper.GetMetadata(mediaDownloadLocation);
         if (mediaInfo == null) {
             return BadRequest("Could not get metadata from file");
         }
 
-        string finalMediaLocation;
+        string finalMediaLocation = Path.Combine(downloadDirectory.FullName, instanceId.ToString(), $"{queue.Id}.mp4");
         List<QueueSubtitles> subtitles = new List<QueueSubtitles>();
-        
+
         if (burnSubtitle) {
             string subtitlesFileLocation = $"{FileHelper.TemporaryFile}.mkv";
-            var subtitlesExtracted = await ffmpegHelper.ExtractSubtitles(mediaDownloadLocation, subtitlesFileLocation, chosenSubtitleStream);
+            bool subtitlesExtracted = await fileTranscode.AddExtractSubtitleFile(subtitlesFileLocation, chosenSubtitleStream);
             if (!subtitlesExtracted) return BadRequest("Could not extract subtitles from the file");
-            finalMediaLocation = Path.Combine(downloadDirectory.FullName, instanceId.ToString(), $"{queue.Id}.mp4");
-            var createdVideoFileWithBurntInSubtitles = await ffmpegHelper.BurnSubtitles(mediaDownloadLocation, subtitlesFileLocation, finalMediaLocation);
-            if (!createdVideoFileWithBurntInSubtitles) return BadRequest("Could not burn subtitles into video file");
         } else {
             subtitles = new List<QueueSubtitles>();
             DirectoryInfo mediaDirectory = Directory.CreateDirectory(Path.Combine(downloadDirectory.FullName, instanceId.ToString()));
@@ -152,10 +147,27 @@ public class QueueController : ControllerBase {
             }
         }
 
+        if (burnSubtitle) {
+            // Transcoding is required, may as well let ffmpeg convert the incompatible streams itself
+            await fileTranscode.Transcode(finalMediaLocation);
+        } else {
+            List<int> incompatibleStreams = GetIncompatibleStreams(mediaInfo);
+
+            if (incompatibleStreams.Count > 0) {
+                foreach (int streamId in incompatibleStreams) {
+                    fileTranscode.AddStream(mediaInfo.Streams.First(stream => stream.Index == streamId));
+                }
+
+                bool successful = await fileTranscode.Transcode(finalMediaLocation);
+                if (!successful) return BadRequest("Could not transcode video");
+            }
+        }
+
+
         string newFileName = Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}{extension}");
         System.IO.File.Move(mediaDownloadLocation, newFileName);
         mediaDownloadLocation = newFileName;
-        
+
         await AddUploadedVideoToDb(ffmpegCore, ffmpegHelper, queue, hostedLocation, extension, fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, mediaInfo.Streams.Any(stream => stream.CodecType == FfprobeMetadata.CodecType.Video), subtitles);
         await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
 
@@ -280,22 +292,22 @@ public class QueueController : ControllerBase {
 
     private async Task ConvertUploadedFile(bool forVideo, string mediaDownloadLocation, DirectoryInfo downloadDirectory, Queue queue, string hostedLocation, FileHelper fileHelper, Guid instanceId, string connectionId, List<QueueSubtitles> queueSubtitles) {
         bool converted;
-        if (forVideo) {
-            converted = await FfmpegHelper.ConvertVideo(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"), videoCodec: VideoCodec.vp9);
-        } else {
-            converted = await FfmpegHelper.ConvertAudio(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.flac"), audioCodec: AudioCodec.flac);
-        }
+        // if (forVideo) {
+        //     converted = await FfmpegHelper.ConvertVideo(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.webm"), videoCodec: VideoCodec.vp9);
+        // } else {
+        //     converted = await FfmpegHelper.ConvertAudio(_logger, mediaDownloadLocation, Path.Combine(downloadDirectory.FullName, $"{queue.Id.ToString()}.flac"), audioCodec: AudioCodec.flac);
+        // }
 
-        if (converted) {
-            _logger.LogInformation("Successfully converted media");
-            queue.MediaType = forVideo ? "video/webm" : "audio/flac";
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            await AddUploadedVideoToDb(queue, hostedLocation, forVideo ? ".webm" : ".flac", fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, forVideo, queueSubtitles);
-            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
-        } else {
-            _logger.LogInformation("Error converting media");
-            await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Error Uploading Media", "Could not upload the media; could not be converted to appropriate web media format", MatToastType.Danger);
-        }
+        // if (converted) {
+        //     _logger.LogInformation("Successfully converted media");
+        //     queue.MediaType = forVideo ? "video/webm" : "audio/flac";
+        //     await using var context = await _contextFactory.CreateDbContextAsync();
+        //     await AddUploadedVideoToDb(queue, hostedLocation, forVideo ? ".webm" : ".flac", fileHelper, mediaDownloadLocation, downloadDirectory, context, instanceId, forVideo, queueSubtitles);
+        //     await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Uploaded File", "File Uploaded", MatToastType.Info);
+        // } else {
+        //     _logger.LogInformation("Error converting media");
+        //     await _hubContext.Clients.Client(connectionId).SendAsync("ToasterError", "Error Uploading Media", "Could not upload the media; could not be converted to appropriate web media format", MatToastType.Danger);
+        // }
     }
 
     private async Task AddUploadedVideoToDb(IFfmpegCore ffmpegCore, FfmpegHelper ffmpegHelper, Queue queue, string hostedLocation, string extension, FileHelper fileHelper, string videoDownloadLocation, DirectoryInfo downloadDirectory, GeneralDbContext context, Guid instanceId, bool forVideo, List<QueueSubtitles> queueSubtitles) {
@@ -309,6 +321,7 @@ public class QueueController : ControllerBase {
                 thumbnailFileName.WriteTo(thumbnailFileStream);
                 thumbnailFileStream.Close();
             }
+
             queue.Thumbnail = thumbnailFileName != null ? Path.Combine(hostedLocation, fileName) : null;
         }
 
@@ -327,5 +340,26 @@ public class QueueController : ControllerBase {
         // fetch an updated list here because file uploads may have taken a long time and queue may have been modified during the process
         var updatedInstanceQueues = await context.Instances.Where(instance => instance.Id == instanceId).Include(p => p.VideoQueue).ThenInclude(q => q.Subtitles).FirstOrDefaultAsync();
         await _hubContext.Clients.Group(instanceId.ToString()).SendAsync("AnnounceVideo", updatedInstanceQueues?.VideoQueue);
+    }
+
+    /// <summary>
+    /// Gets the streams of a file that are incompatible with browsers.
+    /// <param name="fileMetadata">The files' metadata.</param>
+    /// </summary>
+    /// <returns>List of indexes of streams that are incompatible with a browser.</returns>
+    private List<int> GetIncompatibleStreams(FfprobeMetadata.Metadata fileMetadata) {
+        IEnumerable<FfprobeMetadata.Stream> mediaStreams = fileMetadata.Streams.Where(stream => stream.CodecType == FfprobeMetadata.CodecType.Video || stream.CodecType == FfprobeMetadata.CodecType.Audio);
+        List<int> streamIds = new List<int>();
+        foreach (FfprobeMetadata.Stream mediaStream in mediaStreams) {
+            var supportedSteram = FileHelper.CheckSupportedFile(fileMetadata.Format.Container,
+                mediaStream.CodecType == FfprobeMetadata.CodecType.Video ? mediaStream.VideoCodecName : null,
+                mediaStream.CodecType == FfprobeMetadata.CodecType.Audio ? mediaStream.AudioCodecName : null);
+
+            if (!supportedSteram) {
+                streamIds.Add(mediaStream.Index);
+            }
+        }
+
+        return streamIds;
     }
 }
