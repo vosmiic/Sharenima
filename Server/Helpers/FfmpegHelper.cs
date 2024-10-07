@@ -30,7 +30,7 @@ public class FfmpegHelper {
     /// <returns>True if successfully created the subtitles file.</returns>
     public async Task<bool> ExtractSubtitles(string inputFileLocation, string outputFileLocation, int? subtitleStreamToExtract = null) {
         MemoryStream? response = await _ffmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{(subtitleStreamToExtract != null ? subtitleStreamToExtract : "s")} -map 0:t? \"{outputFileLocation}\"");
-        return response == null || !File.Exists(outputFileLocation);
+        return response != null && File.Exists(outputFileLocation);
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ public class FfmpegHelper {
     /// <returns>True if successfully created the subtitle file.</returns>
     public async Task<bool> ExtractSubtitle(string inputFileLocation, string outputFileLocation, int subtitleStreamToExtract) {
         MemoryStream? response = await _ffmpegCore.RunFfmpegCommand($"-i \"{inputFileLocation}\" -c copy -map 0:{subtitleStreamToExtract} -codec:s srt \"{outputFileLocation}\"");
-        return response == null || !File.Exists(outputFileLocation);
+        return response != null && File.Exists(outputFileLocation);
     }
 
     /// <summary>
