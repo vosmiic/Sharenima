@@ -11,6 +11,7 @@
     <PackageReference Include="CliWrap" Version="3.6.6" />
     <PackageReference Include="FFMpegCore" Version="5.1.0" />
     <PackageReference Include="gnuciDictionary" Version="0.0.9" />
+    <PackageReference Include="LiveStreamingServerNet" Version="0.17.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.10" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.10" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.6" />
