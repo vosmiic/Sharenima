@@ -1,3 +1,5 @@
+using System.Net;
+using LiveStreamingServerNet;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -62,6 +64,7 @@ builder.Services.AddScoped<IAuthorizationHandler, AddVideoHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, AdministratorHandler>();
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")));
 
+builder.Services.AddTransient<StreamAuthHandler>();
 
 builder.Services.AddAuthorization(options => {
     options.AddPolicy("Admin", policy =>
@@ -98,13 +101,24 @@ app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 
-using var scope = app.Services.CreateScope();
+var scope = app.Services.CreateScope();
 GeneralDbContext context = scope.ServiceProvider.GetRequiredService<GeneralDbContext>();
 app.UseStaticFiles(new StaticFileOptions {
     FileProvider = new PhysicalFileProvider(context.Settings.FirstOrDefault(setting => setting.Key == SettingKey.DownloadLocation).Value),
     RequestPath = "/files",
     ServeUnknownFileTypes = true // todo fine for dev, not prod
 });
+
+using var server = LiveStreamingServerBuilder.Create()
+    .ConfigureLogging(opt => opt.AddConsole())
+    .ConfigureRtmpServer(opt => {
+        opt.AddAuthorizationHandler(sp => {
+            var scopedProvider = scope.ServiceProvider;
+            return scopedProvider.GetRequiredService<StreamAuthHandler>();
+        });
+    }).Build();
+
+server.RunAsync(new IPEndPoint(IPAddress.Any, 1935));
 
 app.UseRouting();
 
