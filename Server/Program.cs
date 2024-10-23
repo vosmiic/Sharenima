@@ -1,5 +1,9 @@
 using System.Net;
 using LiveStreamingServerNet;
+using LiveStreamingServerNet.AdminPanelUI;
+using LiveStreamingServerNet.Flv.Installer;
+using LiveStreamingServerNet.Standalone;
+using LiveStreamingServerNet.Standalone.Installer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -84,7 +88,22 @@ builder.Services.AddResponseCompression(opts => {
         new[] { "application/octet-stream" });
 });
 
+builder.Services.AddLiveStreamingServer(
+    new IPEndPoint(IPAddress.Any, 1935),
+    options => {
+        options.AddAuthorizationHandler(sp => {
+            var scopedProvider = sp.CreateScope();
+            return scopedProvider.ServiceProvider.GetRequiredService<StreamAuthHandler>();
+        });
+        options.AddFlv();
+        options.AddStandaloneServices().AddFlv();
+    }
+);
+
 var app = builder.Build();
+
+app.MapStandaloneServerApiEndPoints();
+app.UseAdminPanelUI(new AdminPanelUIOptions { BasePath = "/ui", HasHttpFlvPreview = true });
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()) {
@@ -109,16 +128,9 @@ app.UseStaticFiles(new StaticFileOptions {
     ServeUnknownFileTypes = true // todo fine for dev, not prod
 });
 
-using var server = LiveStreamingServerBuilder.Create()
-    .ConfigureLogging(opt => opt.AddConsole())
-    .ConfigureRtmpServer(opt => {
-        opt.AddAuthorizationHandler(sp => {
-            var scopedProvider = scope.ServiceProvider;
-            return scopedProvider.GetRequiredService<StreamAuthHandler>();
-        });
-    }).Build();
-
-server.RunAsync(new IPEndPoint(IPAddress.Any, 1935));
+app.UseWebSockets();
+app.UseWebSocketFlv();
+app.UseHttpFlv();
 
 app.UseRouting();
 
