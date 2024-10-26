@@ -1,11 +1,6 @@
-var dotNetHelper;
 let livePlayer;
 
-function setDotNetHelper(value) {
-    dotNetHelper = value;
-}
-
-function initializeStreamPlayer(streamUrl) {
+export function initializeStreamPlayer(streamUrl) {
     if (document.getElementById('streamPlayer') != null) {
         livePlayer = OvenPlayer.create('streamPlayer', {
             sources: [

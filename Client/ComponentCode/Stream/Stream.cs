@@ -5,16 +5,16 @@ using Microsoft.JSInterop;
 
 namespace Sharenima.Client.ComponentCode.Stream;
 
-public partial class Stream : ComponentBase {
+public partial class Stream : ComponentBase, IAsyncDisposable {
     [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
     [Inject] private IHttpClientFactory HttpClientFactory { get; set; }
     [Inject] private IJSRuntime _jsRuntime { get; set; }
     [Parameter] public string Username { get; set; }
-    private DotNetObjectReference<Stream>? objRef;
     private HttpClient? _authHttpClient { get; set; }
     private HttpClient _anonymousHttpClient { get; set; }
     protected Sharenima.Shared.Stream? SelectedStream { get; set; }
     protected bool Owner { get; set; }
+    private IJSObjectReference? module;
 
     protected override async Task OnParametersSetAsync() {
         var authState = await authenticationStateTask;
@@ -41,10 +41,9 @@ public partial class Stream : ComponentBase {
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
-        objRef = DotNetObjectReference.Create(this);
-        await _jsRuntime.InvokeVoidAsync("setDotNetHelper", objRef);
+        module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./Pages/Stream/Stream.razor.js");
 
-        await _jsRuntime.InvokeVoidAsync("initializeStreamPlayer", SelectedStream?.PlayUrl);
+        await module.InvokeVoidAsync("initializeStreamPlayer", SelectedStream?.PlayUrl);
     }
 
     protected async Task GenerateStreamUrl() {
@@ -56,6 +55,12 @@ public partial class Stream : ComponentBase {
 
             SelectedStream.StreamServer = responseStream.StreamServer;
             SelectedStream.StreamKey = responseStream.StreamKey;
+        }
+    }
+    
+    public async ValueTask DisposeAsync() {
+        if (module is not null) {
+            await module.DisposeAsync();
         }
     }
 }
