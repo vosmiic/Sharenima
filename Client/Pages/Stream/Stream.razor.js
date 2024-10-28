@@ -9,9 +9,7 @@ export function initializeStreamPlayer(streamUrl) {
         });
         flvPlayer.attachMediaElement(document.getElementById('streamVideo'));
         flvPlayer.load();
-        console.log("test2");
     }
-    console.log("test");
 }
 
 function loadNewStream(streamUrl) {
