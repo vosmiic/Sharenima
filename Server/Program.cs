@@ -96,14 +96,12 @@ builder.Services.AddLiveStreamingServer(
             return scopedProvider.ServiceProvider.GetRequiredService<StreamAuthHandler>();
         });
         options.AddFlv();
-        options.AddStandaloneServices().AddFlv();
     }
 );
 
 var app = builder.Build();
 
 app.MapStandaloneServerApiEndPoints();
-app.UseAdminPanelUI(new AdminPanelUIOptions { BasePath = "/ui", HasHttpFlvPreview = true });
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()) {
@@ -128,10 +126,6 @@ app.UseStaticFiles(new StaticFileOptions {
     ServeUnknownFileTypes = true // todo fine for dev, not prod
 });
 
-app.UseWebSockets();
-app.UseWebSocketFlv();
-app.UseHttpFlv();
-
 app.UseRouting();
 
 app.UseIdentityServer();
@@ -144,5 +138,10 @@ app.MapHub<QueueHub>("/queuehub");
 app.MapRazorPages();
 app.MapControllers();
 app.MapFallbackToFile("index.html");
+
+app.UseWebSockets();
+app.UseWebSocketFlv();
+
+app.UseHttpFlv();
 
 app.Run();
