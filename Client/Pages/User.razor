@@ -1,0 +1,30 @@
+@page "/a/{Username}"
+@using Sharenima.Client.Pages.Stream
+
+@if (SelectedStream == null) {
+    <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large"/>
+} else {
+    <div class="container">
+        <div class="row">
+            <div class="col-10">
+                <div id="streamContainer" class="playerContainer" style="height: unset">
+                    <Stream PlayUrl="@SelectedStream.PlayUrl"></Stream>
+                </div>
+            </div>
+            <div class="col-2">
+                @if (Owner) {
+                    <p>
+                        <MatStringField ReadOnly="true" Value="@SelectedStream.StreamServer" Label="Server"></MatStringField>
+                    </p>
+                    <p>
+                        <MatStringField ReadOnly="true" Value="@SelectedStream.StreamKey" Label="Key"></MatStringField>
+                    </p>
+                    <MatButton OnClick="GenerateStreamUrl">Generate</MatButton>
+                    <p>Copy the above values into your streaming software.</p>
+                } else {
+                    <p>Only the owner of the account can see this.</p>
+                }
+            </div>
+        </div>
+    </div>
+}
